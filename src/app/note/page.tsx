@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useEditor, EditorContent, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -25,15 +24,24 @@ import {
   SeparatorHorizontal,
   Undo,
   Redo,
+  X,
 } from "lucide-react";
 
-export default function NotePage() {
-  const [title, setTitle] = useState("");
-  const [createdAt, setCreatedAt] = useState("");
-  const [verseReference, setVerseReference] = useState("");
-  const [verseContent, setVerseContent] = useState("");
-  const [activeTab, setActiveTab] = useState("notes");
+interface Note {
+  id: number;
+  content: string;
+  position: { x: number; y: number };
+}
 
+function NoteEditor({
+  note,
+  onUpdate,
+  onSelect,
+}: {
+  note: Note;
+  onUpdate: (content: string) => void;
+  onSelect: (editor: Editor) => void;
+}) {
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -48,51 +56,167 @@ export default function NotePage() {
         emptyEditorClass: "is-editor-empty",
       }),
     ],
-    content: "",
+    content: note.content,
     onUpdate: ({ editor }) => {
-      // You can save the content here if needed
-      console.log(editor.getHTML());
+      onUpdate(editor.getHTML());
     },
   });
+
+  useEffect(() => {
+    if (editor && editor.getHTML() !== note.content) {
+      editor.commands.setContent(note.content);
+    }
+  }, [editor, note.content]);
+
+  return (
+    <EditorContent
+      editor={editor}
+      onClick={() => editor && onSelect(editor)}
+      className="min-w-[200px] min-h-[100px] prose max-w-none tiptap"
+    />
+  );
+}
+
+export default function NotePage() {
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [title, setTitle] = useState("");
+  const [createdAt, setCreatedAt] = useState("");
+  const [verseReference, setVerseReference] = useState("");
+  const [verseContent, setVerseContent] = useState("");
+  const [selectedNoteId, setSelectedNoteId] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
 
   useEffect(() => {
     const now = new Date();
     setCreatedAt(now.toLocaleString());
   }, []);
 
+  const handleAddNote = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.detail !== 2 || e.target !== containerRef.current) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+
+    const isNearExistingNote = notes.some((note) => {
+      const dx = clickX - note.position.x;
+      const dy = clickY - note.position.y;
+      return Math.sqrt(dx * dx + dy * dy) < 48;
+    });
+
+    if (isNearExistingNote) return;
+
+    const newId =
+      notes.length > 0 ? Math.max(...notes.map((note) => note.id)) + 1 : 1;
+    const newNote: Note = {
+      id: newId,
+      content: "",
+      position: { x: clickX, y: clickY },
+    };
+    setNotes([...notes, newNote]);
+    setSelectedNoteId(newId);
+  };
+
   const handleAddVerse = async () => {
     setVerseContent(`Content for ${verseReference}`);
   };
 
   const handleLinkVerse = useCallback(() => {
-    if (editor) {
-      if (editor.isActive("link")) {
-        editor.chain().focus().unsetLink().run();
-      } else {
-        const { from, to } = editor.state.selection;
-        const text = editor.state.doc.textBetween(from, to, "");
+    if (selectedNoteId !== null && activeEditor) {
+      activeEditor.chain().focus().setLink({ href: verseReference }).run();
+    }
+  }, [selectedNoteId, activeEditor, verseReference]);
 
-        if (text) {
-          editor.chain().focus().setLink({ href: verseReference }).run();
-        } else {
-          // If no text is selected, insert the verse reference as a link
-          editor
-            .chain()
-            .focus()
-            .insertContent(`<a href="${verseReference}">${verseReference}</a>`)
-            .run();
-        }
+  const handleDrag = (
+    id: number,
+    e: React.MouseEvent,
+    startX: number,
+    startY: number
+  ) => {
+    e.preventDefault();
+    const note = notes.find((n) => n.id === id);
+    if (!note) return;
+
+    const initialX = note.position.x;
+    const initialY = note.position.y;
+
+    const onMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - startX;
+      const deltaY = e.clientY - startY;
+      const updatedNotes = notes.map((n) =>
+        n.id === id
+          ? { ...n, position: { x: initialX + deltaX, y: initialY + deltaY } }
+          : n
+      );
+      setNotes(updatedNotes);
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  };
+
+  const handleNoteSelect = (id: number, editor: Editor) => {
+    setSelectedNoteId(id);
+    setActiveEditor(editor);
+  };
+
+  const handleDeleteNote = (id: number) => {
+    const updatedNotes = notes.filter((note) => note.id !== id);
+    setNotes(updatedNotes);
+    if (selectedNoteId === id) {
+      setSelectedNoteId(null);
+      setActiveEditor(null);
+    }
+  };
+
+  const handleNoteUpdate = (id: number, content: string) => {
+    const updatedNotes = notes.map((note) =>
+      note.id === id ? { ...note, content } : note
+    );
+    setNotes(updatedNotes);
+  };
+
+  const applyFormat = (action: string) => {
+    if (activeEditor) {
+      activeEditor.chain().focus();
+      switch (action) {
+        case "bold":
+          activeEditor.chain().toggleBold().run();
+          break;
+        case "italic":
+          activeEditor.chain().toggleItalic().run();
+          break;
+        case "bulletList":
+          activeEditor.chain().toggleBulletList().run();
+          break;
+        case "orderedList":
+          activeEditor.chain().toggleOrderedList().run();
+          break;
+        case "blockquote":
+          activeEditor.chain().toggleBlockquote().run();
+          break;
+        case "horizontalRule":
+          activeEditor.chain().setHorizontalRule().run();
+          break;
+        case "undo":
+          activeEditor.chain().undo().run();
+          break;
+        case "redo":
+          activeEditor.chain().redo().run();
+          break;
       }
     }
-  }, [editor, verseReference]);
-
-  if (!editor) {
-    return null;
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-emerald-50 p-4">
-      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
+    <div className="min-h-screen bg-emerald-50 p-4 relative">
+      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden mb-4">
         <div className="p-4 bg-emerald-100 text-black">
           <Input
             value={title}
@@ -128,126 +252,135 @@ export default function NotePage() {
             </DialogContent>
           </Dialog>
         </div>
+      </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full bg-emerald-100">
-            <TabsTrigger
-              value="notes"
-              className="w-1/2 data-[state=active]:bg-white data-[state=active]:text-emerald-700"
-            >
-              Notes
-            </TabsTrigger>
-            <TabsTrigger
-              value="verse"
-              className="w-1/2 data-[state=active]:bg-white data-[state=active]:text-emerald-700"
-            >
-              Verse
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="notes" className="p-4">
-            <div className="border border-emerald-200 rounded-md p-2 mb-4">
-              <div className="flex flex-wrap gap-2 mb-2">
-                <Button
-                  size="sm"
-                  variant={editor.isActive("bold") ? "secondary" : "outline"}
-                  onClick={() => editor.chain().focus().toggleBold().run()}
-                  className="text-emerald-600 border-emerald-600 hover:bg-emerald-100"
-                >
-                  <Bold className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant={editor.isActive("italic") ? "secondary" : "outline"}
-                  onClick={() => editor.chain().focus().toggleItalic().run()}
-                  className="text-emerald-600 border-emerald-600 hover:bg-emerald-100"
-                >
-                  <Italic className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant={
-                    editor.isActive("bulletList") ? "secondary" : "outline"
-                  }
-                  onClick={() =>
-                    editor.chain().focus().toggleBulletList().run()
-                  }
-                  className="text-emerald-600 border-emerald-600 hover:bg-emerald-100"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant={
-                    editor.isActive("orderedList") ? "secondary" : "outline"
-                  }
-                  onClick={() =>
-                    editor.chain().focus().toggleOrderedList().run()
-                  }
-                  className="text-emerald-600 border-emerald-600 hover:bg-emerald-100"
-                >
-                  <ListOrdered className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant={editor.isActive("link") ? "secondary" : "outline"}
-                  onClick={handleLinkVerse}
-                  className="text-emerald-600 border-emerald-600 hover:bg-emerald-100"
-                >
-                  <LinkIcon className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant={
-                    editor.isActive("blockquote") ? "secondary" : "outline"
-                  }
-                  onClick={() =>
-                    editor.chain().focus().toggleBlockquote().run()
-                  }
-                  className="text-emerald-600 border-emerald-600 hover:bg-emerald-100"
-                >
-                  <Quote className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    editor.chain().focus().setHorizontalRule().run()
-                  }
-                  className="text-emerald-600 border-emerald-600 hover:bg-emerald-100"
-                >
-                  <SeparatorHorizontal className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => editor.chain().focus().undo().run()}
-                  disabled={!editor.can().undo()}
-                  className="text-emerald-600 border-emerald-600 hover:bg-emerald-100 disabled:opacity-50"
-                >
-                  <Undo className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => editor.chain().focus().redo().run()}
-                  disabled={!editor.can().redo()}
-                  className="text-emerald-600 border-emerald-600 hover:bg-emerald-100 disabled:opacity-50"
-                >
-                  <Redo className="h-4 w-4" />
-                </Button>
-              </div>
-              <EditorContent
-                editor={editor}
-                className="min-h-[200px] prose max-w-none tiptap"
+      <div
+        ref={containerRef}
+        className="relative w-full h-[calc(100vh-200px)] overflow-hidden"
+        onDoubleClick={handleAddNote}
+      >
+        {notes.map((note) => (
+          <div
+            key={note.id}
+            className={`absolute p-4 bg-white border-2 border-emerald-200 rounded-lg shadow-md ${
+              selectedNoteId === note.id ? "border-emerald-500" : ""
+            }`}
+            style={{
+              left: note.position.x,
+              top: note.position.y,
+              minWidth: "250px",
+              minHeight: "150px",
+            }}
+          >
+            <div
+              className="absolute inset-0 cursor-move"
+              onMouseDown={(e) => handleDrag(note.id, e, e.clientX, e.clientY)}
+            />
+            <div className="relative z-10" onClick={(e) => e.stopPropagation()}>
+              <NoteEditor
+                note={note}
+                onUpdate={(content) => handleNoteUpdate(note.id, content)}
+                onSelect={(editor) => handleNoteSelect(note.id, editor)}
               />
             </div>
-          </TabsContent>
-          <TabsContent value="verse" className="p-4">
-            <p className="font-bold text-emerald-800">{verseReference}</p>
-            <p className="text-emerald-600">{verseContent}</p>
-          </TabsContent>
-        </Tabs>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="absolute top-1 right-1 h-6 w-6 p-0 text-gray-500 hover:text-gray-700 hover:bg-transparent z-20"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteNote(note.id);
+              }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
       </div>
+
+      {selectedNoteId !== null && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white shadow-lg rounded-lg p-2 flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => applyFormat("bold")}
+            className="text-emerald-600 border-emerald-600 hover:bg-emerald-100"
+          >
+            <Bold className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => applyFormat("italic")}
+            className="text-emerald-600 border-emerald-600 hover:bg-emerald-100"
+          >
+            <Italic className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => applyFormat("bulletList")}
+            className="text-emerald-600 border-emerald-600 hover:bg-emerald-100"
+          >
+            <List className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => applyFormat("orderedList")}
+            className="text-emerald-600 border-emerald-600 hover:bg-emerald-100"
+          >
+            <ListOrdered className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleLinkVerse}
+            className="text-emerald-600 border-emerald-600 hover:bg-emerald-100"
+          >
+            <LinkIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => applyFormat("blockquote")}
+            className="text-emerald-600 border-emerald-600 hover:bg-emerald-100"
+          >
+            <Quote className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => applyFormat("horizontalRule")}
+            className="text-emerald-600 border-emerald-600 hover:bg-emerald-100"
+          >
+            <SeparatorHorizontal className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => applyFormat("undo")}
+            className="text-emerald-600 border-emerald-600 hover:bg-emerald-100"
+          >
+            <Undo className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => applyFormat("redo")}
+            className="text-emerald-600 border-emerald-600 hover:bg-emerald-100"
+          >
+            <Redo className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {verseContent && (
+        <div className="mt-4 p-4 bg-white shadow-lg rounded-lg">
+          <p className="font-bold text-emerald-800">{verseReference}</p>
+          <p className="text-emerald-600">{verseContent}</p>
+        </div>
+      )}
     </div>
   );
 }

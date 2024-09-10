@@ -182,3 +182,17 @@
   height: 0;
   pointer-events: none;
 }
+
+.tiptap {
+  cursor: text;
+}
+
+.tiptap:not(:focus) {
+  border: 1px solid transparent;
+}
+
+.tiptap:focus {
+  outline: none;
+  border: 1px solid #10b981;
+  border-radius: 4px;
+}
