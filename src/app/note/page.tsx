@@ -25,6 +25,7 @@ import {
   Undo,
   Redo,
   X,
+  Move,
 } from "lucide-react";
 
 interface Note {
@@ -92,20 +93,16 @@ export default function NotePage() {
     setCreatedAt(now.toLocaleString());
   }, []);
 
-  const handleAddNote = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.detail !== 2 || e.target !== containerRef.current) return;
+  const handleAddNote = (
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>
+  ) => {
+    if (e.target !== containerRef.current) return;
 
     const rect = containerRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-
-    const isNearExistingNote = notes.some((note) => {
-      const dx = clickX - note.position.x;
-      const dy = clickY - note.position.y;
-      return Math.sqrt(dx * dx + dy * dy) < 48;
-    });
-
-    if (isNearExistingNote) return;
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    const clickX = clientX - rect.left;
+    const clickY = clientY - rect.top;
 
     const newId =
       notes.length > 0 ? Math.max(...notes.map((note) => note.id)) + 1 : 1;
@@ -128,22 +125,33 @@ export default function NotePage() {
     }
   }, [selectedNoteId, activeEditor, verseReference]);
 
-  const handleDrag = (
+  const handleDragStart = (
     id: number,
-    e: React.MouseEvent,
-    startX: number,
-    startY: number
+    e: React.MouseEvent | React.TouchEvent
   ) => {
     e.preventDefault();
     const note = notes.find((n) => n.id === id);
     if (!note) return;
 
+    setSelectedNoteId(id);
+
+    const startX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const startY = "touches" in e ? e.touches[0].clientY : e.clientY;
     const initialX = note.position.x;
     const initialY = note.position.y;
 
-    const onMouseMove = (e: MouseEvent) => {
-      const deltaX = e.clientX - startX;
-      const deltaY = e.clientY - startY;
+    const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
+      const clientX =
+        "touches" in moveEvent
+          ? moveEvent.touches[0].clientX
+          : moveEvent.clientX;
+      const clientY =
+        "touches" in moveEvent
+          ? moveEvent.touches[0].clientY
+          : moveEvent.clientY;
+      const deltaX = clientX - startX;
+      const deltaY = clientY - startY;
+
       const updatedNotes = notes.map((n) =>
         n.id === id
           ? { ...n, position: { x: initialX + deltaX, y: initialY + deltaY } }
@@ -152,13 +160,17 @@ export default function NotePage() {
       setNotes(updatedNotes);
     };
 
-    const onMouseUp = () => {
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
+    const handleEnd = () => {
+      document.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("touchmove", handleMove);
+      document.removeEventListener("mouseup", handleEnd);
+      document.removeEventListener("touchend", handleEnd);
     };
 
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
+    document.addEventListener("mousemove", handleMove);
+    document.addEventListener("touchmove", handleMove);
+    document.addEventListener("mouseup", handleEnd);
+    document.addEventListener("touchend", handleEnd);
   };
 
   const handleNoteSelect = (id: number, editor: Editor) => {
@@ -216,20 +228,22 @@ export default function NotePage() {
 
   return (
     <div className="min-h-screen bg-emerald-50 p-4 relative">
-      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden mb-4">
+      <div className="max-w-full mx-auto bg-white shadow-lg rounded-lg overflow-hidden mb-4">
         <div className="p-4 bg-emerald-100 text-black">
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Note Title"
-            className="text-2xl font-bold mb-2 bg-transparent border-none text-black placeholder-emerald-200"
+            className="text-xl md:text-2xl font-bold mb-2 bg-transparent border-none text-black placeholder-emerald-200"
           />
-          <p className="text-sm text-emerald-700 mb-4 ml-1">{createdAt}</p>
+          <p className="text-xs md:text-sm text-emerald-700 mb-4 ml-1">
+            {createdAt}
+          </p>
           <Dialog>
             <DialogTrigger asChild>
               <Button
                 variant="outline"
-                className="bg-white text-emerald-600 hover:bg-emerald-200"
+                className="bg-white text-emerald-600 hover:bg-emerald-200 text-sm md:text-base"
               >
                 Add Bible Verse
               </Button>
@@ -256,8 +270,9 @@ export default function NotePage() {
 
       <div
         ref={containerRef}
-        className="relative w-full h-[calc(100vh-200px)] overflow-hidden"
-        onDoubleClick={handleAddNote}
+        className="relative w-full h-[calc(100vh-200px)] overflow-auto touch-none"
+        onClick={handleAddNote}
+        onTouchStart={handleAddNote}
       >
         {notes.map((note) => (
           <div
@@ -268,15 +283,21 @@ export default function NotePage() {
             style={{
               left: note.position.x,
               top: note.position.y,
-              minWidth: "250px",
-              minHeight: "150px",
+              width: "80%",
+              maxWidth: "300px",
             }}
           >
             <div
-              className="absolute inset-0 cursor-move"
-              onMouseDown={(e) => handleDrag(note.id, e, e.clientX, e.clientY)}
-            />
-            <div className="relative z-10" onClick={(e) => e.stopPropagation()}>
+              className="absolute top-0 left-0 right-0 h-8 bg-emerald-100 cursor-move flex items-center justify-center"
+              onMouseDown={(e) => handleDragStart(note.id, e)}
+              onTouchStart={(e) => handleDragStart(note.id, e)}
+            >
+              <Move className="h-4 w-4 text-emerald-600" />
+            </div>
+            <div
+              className="relative z-10 mt-8"
+              onClick={(e) => e.stopPropagation()}
+            >
               <NoteEditor
                 note={note}
                 onUpdate={(content) => handleNoteUpdate(note.id, content)}
@@ -299,7 +320,7 @@ export default function NotePage() {
       </div>
 
       {selectedNoteId !== null && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white shadow-lg rounded-lg p-2 flex gap-2">
+        <div className="fixed bottom-4 left-0 right-0 bg-white shadow-lg rounded-lg p-2 flex gap-2 overflow-x-auto mx-4">
           <Button
             size="sm"
             variant="outline"
