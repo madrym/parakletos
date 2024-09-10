@@ -93,16 +93,12 @@ export default function NotePage() {
     setCreatedAt(now.toLocaleString());
   }, []);
 
-  const handleAddNote = (
-    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>
-  ) => {
-    if (e.target !== containerRef.current) return;
+  const handleAddNote = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target !== containerRef.current || e.detail !== 2) return; // Check for double-click
 
     const rect = containerRef.current.getBoundingClientRect();
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-    const clickX = clientX - rect.left;
-    const clickY = clientY - rect.top;
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
 
     const newId =
       notes.length > 0 ? Math.max(...notes.map((note) => note.id)) + 1 : 1;
@@ -272,7 +268,6 @@ export default function NotePage() {
         ref={containerRef}
         className="relative w-full h-[calc(100vh-200px)] overflow-auto touch-none"
         onClick={handleAddNote}
-        onTouchStart={handleAddNote}
       >
         {notes.map((note) => (
           <div
