@@ -103,7 +103,7 @@ export async function getBiblePassage(
       : verses;
 
     const biblePassage: BiblePassage = {
-      bookName: reference.bookName,
+      bookName: filteredVerses[0].book.name,
       chapter: reference.chapter,
       verses: filteredVerses,
     };

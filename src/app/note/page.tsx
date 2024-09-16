@@ -40,6 +40,16 @@ interface BibleNote {
   text: string;
 }
 
+type BiblePassageData = {
+  bookName: string;
+  chapter: number;
+  verses: {
+    verseId: number;
+    verse: string;
+  }[];
+  error?: string;
+};
+
 const highlightColors = [
   "bg-yellow-200",
   "bg-green-200",
@@ -109,7 +119,7 @@ export default function NotePage() {
         throw new Error(`Error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data: BiblePassageData = await response.json();
 
       if (data.error) {
         throw new Error(data.error);
@@ -118,9 +128,10 @@ export default function NotePage() {
       const startVerse = data.verses[0].verseId;
       const endVerse = data.verses[data.verses.length - 1].verseId;
       const verseRange = startVerse === endVerse ? `${startVerse}` : `${startVerse}-${endVerse}`;
+
       const newSection: Section = {
         title: `${data.bookName} ${data.chapter}:${verseRange}`,
-        verses: data.verses.map((verse: any) => ({
+        verses: data.verses.map((verse) => ({
           number: verse.verseId,
           text: verse.verse,
         })),
