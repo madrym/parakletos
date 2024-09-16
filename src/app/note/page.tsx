@@ -40,44 +40,6 @@ interface BibleNote {
   text: string;
 }
 
-const biblePassage: Section[] = [
-  {
-    title: "Jesus Comforts His Disciples",
-    verses: [
-      {
-        number: 1,
-        text: "Do not let your hearts be troubled. You believe in God; believe also in me.",
-      },
-      {
-        number: 2,
-        text: "My Father's house has many rooms; if that were not so, would I have told you that I am going there to prepare a place for you?",
-      },
-      {
-        number: 3,
-        text: "And if I go and prepare a place for you, I will come back and take you to be with me that you also may be where I am.",
-      },
-      { number: 4, text: "You know the way to the place where I am going." },
-    ],
-  },
-  {
-    title: "Jesus the Way to the Father",
-    verses: [
-      {
-        number: 5,
-        text: 'Thomas said to him, "Lord, we don\'t know where you are going, so how can we know the way?"',
-      },
-      {
-        number: 6,
-        text: 'Jesus answered, "I am the way and the truth and the life. No one comes to the Father except through me.',
-      },
-      {
-        number: 7,
-        text: 'If you really know me, you will know my Father as well. From now on, you do know him and have seen him."',
-      },
-    ],
-  },
-];
-
 const highlightColors = [
   "bg-yellow-200",
   "bg-green-200",
@@ -93,9 +55,8 @@ export default function NotePage() {
   const [title, setTitle] = useState("");
   const [createdAt, setCreatedAt] = useState("");
   const [verseReference, setVerseReference] = useState("");
-  const [verseContent, setVerseContent] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
-  const [sections, setSections] = useState(biblePassage);
+  const [sections, setSections] = useState<Section[]>([]);
   const [selectedVerses, setSelectedVerses] = useState<number[]>([]);
   const [bibleNotes, setBibleNotes] = useState<BibleNote[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
@@ -137,7 +98,39 @@ export default function NotePage() {
   }, [selectedVerses]);
 
   const handleAddVerse = async () => {
-    setVerseContent(`Content for ${verseReference}`);
+    try {
+      const response = await fetch('/api/getPassage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reference: verseReference, translation: 'niv' }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      const startVerse = data.verses[0].verseId;
+      const endVerse = data.verses[data.verses.length - 1].verseId;
+      const verseRange = startVerse === endVerse ? `${startVerse}` : `${startVerse}-${endVerse}`;
+      const newSection: Section = {
+        title: `${data.bookName} ${data.chapter}:${verseRange}`,
+        verses: data.verses.map((verse: any) => ({
+          number: verse.verseId,
+          text: verse.verse,
+        })),
+      };
+
+      setSections((prevSections) => [...prevSections, newSection]);
+      // End of Selection
+    } catch (err) {
+      console.error('Error fetching passage:', err);
+    }
   };
 
   const toggleVerseSelection = (verseNumber: number) => {
@@ -253,7 +246,6 @@ export default function NotePage() {
           className="relative w-full h-[calc(100vh-200px)] overflow-auto"
         >
           <div className="max-w-4xl mx-auto p-4 font-serif relative mt-8">
-            <h1 className="text-3xl font-bold text-center mb-8">JOHN 14</h1>
             {sections.map((section, index) => (
               <div key={index} className="mb-6">
                 <h2 className="text-xl font-bold mb-4">{section.title}</h2>
@@ -428,13 +420,6 @@ export default function NotePage() {
               </TooltipTrigger>
               <TooltipContent>Copy</TooltipContent>
             </Tooltip>
-          </div>
-        )}
-
-        {verseContent && (
-          <div className="mt-4 p-4 bg-white shadow-lg rounded-lg">
-            <p className="font-bold text-emerald-800">{verseReference}</p>
-            <p className="text-emerald-600">{verseContent}</p>
           </div>
         )}
 
