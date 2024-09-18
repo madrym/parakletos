@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { getBookId } from './bookIdMapping';
 
 interface ParsedReference {
   bookName: string;
