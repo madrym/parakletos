@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import { Lightbulb, Pencil, Highlighter, Palette, Copy } from "lucide-react";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 
 interface Verse {
   id: string;
@@ -53,7 +53,7 @@ interface BiblePassage {
   bookName: string;
   chapter: number;
   esvResponse: ESVResponse;
-};
+}
 
 interface ESVResponse {
   query: string;
@@ -130,31 +130,37 @@ export default function NotePage() {
 
   const handleAddVerse = async () => {
     try {
-      const response = await fetch(`/api/getPassage?reference=${encodeURIComponent(verseReference)}`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-  
+      const response = await fetch(
+        `/api/getPassage?reference=${encodeURIComponent(verseReference)}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
       }
-  
+
       const data: BiblePassage = await response.json();
-  
+
       if ("error" in data && typeof data.error === "string") {
         throw new Error(data.error);
       }
-  
+
       // Assuming the structure of `data.passages` is a string of verses, split into an array
       let passageText = data.esvResponse.passages[0]; // The full passage text
       passageText = passageText.replace(/^[^\n]+\n\n/, ""); // Remove the first portion (e.g., "Matthew 5\n\n")
       passageText = passageText.replace(/\s*\(ESV\)$/, ""); // Remove the ESV at the end
-      const verses = passageText.split("\n\n").filter((verse: string) => verse.trim() !== ""); // Split verses by double newline
-  
+      const verses = passageText
+        .split("\n\n")
+        .filter((verse: string) => verse.trim() !== ""); // Split verses by double newline
+
       // Calculate the start and end verse numbers from the response (these are likely available in `parsed` or `passage_meta`)
-      const startVerse = data.esvResponse.passage_meta[0].chapter_start[0] % 1000; // Assuming verses are in form like 40005001 for Matthew 5:1
-      const endVerse = data.esvResponse.passage_meta[0].chapter_end[1] % 1000;
-  
+      const startVerse =
+        data.esvResponse.passage_meta[0].chapter_start[0] % 1000; // Assuming verses are in form like 40005001 for Matthew 5:1
+      // const endVerse = data.esvResponse.passage_meta[0].chapter_end[1] % 1000;
+
       // Construct the newSection object
       const newSection: Section = {
         id: uuidv4(),
@@ -166,33 +172,39 @@ export default function NotePage() {
         })),
         notes: [],
       };
-  
+
       setSections((prevSections) => [...prevSections, newSection]);
     } catch (err) {
       console.error("Error fetching passage:", err);
     }
   };
 
-  const toggleVerseSelection = useCallback((verseNumber: number, sectionId: string) => {
-    setSelectedVerses((prev) => {
-      const isSelected = prev.some(v => v.sectionId === sectionId && v.verseNumber === verseNumber);
-      if (isSelected) {
-        return prev.filter(v => !(v.sectionId === sectionId && v.verseNumber === verseNumber));
-      } else {
-        return [...prev, { sectionId, verseNumber }];
-      }
-    });
-    setCurrentSectionId(sectionId);
-  }, []);
-
-  const isVerseSelected = useCallback((sectionId: string, verseNumber: number) => {
-    return selectedVerses.some(sv => sv.sectionId === sectionId && sv.verseNumber === verseNumber);
-  }, [selectedVerses]);
+  const toggleVerseSelection = useCallback(
+    (verseNumber: number, sectionId: string) => {
+      setSelectedVerses((prev) => {
+        const isSelected = prev.some(
+          (v) => v.sectionId === sectionId && v.verseNumber === verseNumber
+        );
+        if (isSelected) {
+          return prev.filter(
+            (v) => !(v.sectionId === sectionId && v.verseNumber === verseNumber)
+          );
+        } else {
+          return [...prev, { sectionId, verseNumber }];
+        }
+      });
+      setCurrentSectionId(sectionId);
+    },
+    []
+  );
 
   const toggleHighlight = useCallback(() => {
     const anyHighlighted = sections.some((section) =>
       section.verses.some(
-        (verse) => selectedVerses.some(sv => sv.sectionId === section.id && sv.verseNumber === verse.number) && verse.highlight
+        (verse) =>
+          selectedVerses.some(
+            (sv) => sv.sectionId === section.id && sv.verseNumber === verse.number
+          ) && verse.highlight
       )
     );
 
@@ -200,7 +212,11 @@ export default function NotePage() {
       prevSections.map((section) => ({
         ...section,
         verses: section.verses.map((verse) => {
-          if (selectedVerses.some(sv => sv.sectionId === section.id && sv.verseNumber === verse.number)) {
+          if (
+            selectedVerses.some(
+              (sv) => sv.sectionId === section.id && sv.verseNumber === verse.number
+            )
+          ) {
             return {
               ...verse,
               highlight: anyHighlighted ? undefined : currentColor,
@@ -216,10 +232,10 @@ export default function NotePage() {
   const addBibleNote = useCallback(() => {
     if (currentNote.trim() && selectedVerses.length > 0 && currentSectionId) {
       const sortedVerses = [...selectedVerses]
-        .filter(sv => sv.sectionId === currentSectionId)
-        .map(sv => sv.verseNumber)
+        .filter((sv) => sv.sectionId === currentSectionId)
+        .map((sv) => sv.verseNumber)
         .sort((a, b) => a - b);
-      
+
       setSections((prevSections) =>
         prevSections.map((section) =>
           section.id === currentSectionId
@@ -240,16 +256,25 @@ export default function NotePage() {
     }
   }, [currentNote, selectedVerses, currentSectionId]);
 
-  const getNotesForVerse = useCallback((verseNumber: number, sectionId: string) => {
-    const section = sections.find(s => s.id === sectionId);
-    return section ? section.notes.filter(note => note.verseNumbers.includes(verseNumber)) : [];
-  }, [sections]);
+  const getNotesForVerse = useCallback(
+    (verseNumber: number, sectionId: string) => {
+      const section = sections.find((s) => s.id === sectionId);
+      return section
+        ? section.notes.filter((note) => note.verseNumbers.includes(verseNumber))
+        : [];
+    },
+    [sections]
+  );
 
   const copySelectedVerses = useCallback(() => {
     const textToCopy = sections
-      .flatMap((section) => 
+      .flatMap((section) =>
         section.verses
-          .filter((verse) => selectedVerses.some(sv => sv.sectionId === section.id && sv.verseNumber === verse.number))
+          .filter((verse) =>
+            selectedVerses.some(
+              (sv) => sv.sectionId === section.id && sv.verseNumber === verse.number
+            )
+          )
           .map((verse) => `${section.title} ${verse.number}. ${verse.text}`)
       )
       .join("\n");
@@ -260,7 +285,10 @@ export default function NotePage() {
   const isAnySelectedVerseHighlighted = useCallback(() => {
     return sections.some((section) =>
       section.verses.some(
-        (verse) => selectedVerses.some(sv => sv.sectionId === section.id && sv.verseNumber === verse.number) && verse.highlight
+        (verse) =>
+          selectedVerses.some(
+            (sv) => sv.sectionId === section.id && sv.verseNumber === verse.number
+          ) && verse.highlight
       )
     );
   }, [sections, selectedVerses]);
@@ -313,7 +341,7 @@ export default function NotePage() {
           className="relative w-full h-[calc(100vh-200px)] overflow-auto"
         >
           <div className="max-w-4xl mx-auto p-4 font-serif relative mt-8">
-            {sections.map((section, index) => (
+            {sections.map((section) => (
               <div key={section.id} className="mb-6">
                 <h2 className="text-xl font-bold mb-4">{section.title}</h2>
                 <div className="flex">
@@ -367,21 +395,33 @@ export default function NotePage() {
                         <React.Fragment key={`${section.id}-${verse.number}`}>
                           <sup
                             className={`text-xs mr-1 font-sans cursor-pointer ${
-                              selectedVerses.some(sv => sv.sectionId === section.id && sv.verseNumber === verse.number)
+                              selectedVerses.some(
+                                (sv) =>
+                                  sv.sectionId === section.id &&
+                                  sv.verseNumber === verse.number
+                              )
                                 ? "bg-gray-200"
                                 : "text-gray-500"
                             }`}
-                            onClick={() => toggleVerseSelection(verse.number, section.id)}
+                            onClick={() =>
+                              toggleVerseSelection(verse.number, section.id)
+                            }
                           >
                             {verse.number}
                           </sup>
                           <span
                             className={`${verse.highlight || ""} ${
-                              selectedVerses.some(sv => sv.sectionId === section.id && sv.verseNumber === verse.number)
+                              selectedVerses.some(
+                                (sv) =>
+                                  sv.sectionId === section.id &&
+                                  sv.verseNumber === verse.number
+                              )
                                 ? "underline decoration-2 decoration-gray-500"
                                 : ""
                             } cursor-pointer`}
-                            onClick={() => toggleVerseSelection(verse.number, section.id)}
+                            onClick={() =>
+                              toggleVerseSelection(verse.number, section.id)
+                            }
                           >
                             {verse.text}
                           </span>
@@ -421,11 +461,11 @@ export default function NotePage() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                <DialogTitle>
+                  <DialogTitle>
                     Add Note for Verses{" "}
                     {selectedVerses
-                      .filter(sv => sv.sectionId === currentSectionId)
-                      .map(sv => sv.verseNumber)
+                      .filter((sv) => sv.sectionId === currentSectionId)
+                      .map((sv) => sv.verseNumber)
                       .sort((a, b) => a - b)
                       .join(", ")}
                   </DialogTitle>
@@ -463,10 +503,15 @@ export default function NotePage() {
               </TooltipContent>
             </Tooltip>
             <Popover>
-            <Tooltip>
+              <Tooltip>
                 <TooltipTrigger asChild>
                   <PopoverTrigger asChild>
-                    <Button variant="ghost" size="sm" className={currentColor} aria-label="Select Highlight Color">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={currentColor}
+                      aria-label="Select Highlight Color"
+                    >
                       <Palette className="h-4 w-4" />
                     </Button>
                   </PopoverTrigger>
@@ -490,7 +535,12 @@ export default function NotePage() {
             </Popover>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={copySelectedVerses} aria-label="Copy Selected Verses">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={copySelectedVerses}
+                  aria-label="Copy Selected Verses"
+                >
                   <Copy className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
