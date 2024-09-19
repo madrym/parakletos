@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { useSpring, animated } from "react-spring";
-import Link from "next/link";
-import { SignInButton, SignedIn, SignedOut, useAuth } from "@clerk/nextjs";
+import { SignInButton, SignedOut, useAuth } from "@clerk/nextjs";
 
 export default function Component() {
   const router = useRouter();
