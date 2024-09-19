@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { Home as HomeIcon, Menu, Plus, Tag, X } from "lucide-react";
+import { Menu, Plus, Tag, X } from "lucide-react";
 import FileList, { File, GroupedFiles } from "@/components/FileList";
 import Link from "next/link";
+import { UserButton } from "@clerk/nextjs";
 
 // Mock data for recently edited files and tags
 const recentFiles: File[] = [
@@ -124,9 +125,7 @@ export default function Home() {
             </div>
           </SheetContent>
         </Sheet>
-        <Button variant="ghost" size="icon" className="text-white">
-          <HomeIcon className="h-6 w-6" />
-        </Button>
+        <UserButton />
       </header>
       <main className="p-4">
         <div className="flex justify-between items-center mb-6">

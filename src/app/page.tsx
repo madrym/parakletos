@@ -1,14 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useSpring, animated } from "react-spring";
 import Link from "next/link";
+import { SignInButton, SignedIn, SignedOut, useAuth } from "@clerk/nextjs";
 
 export default function Component() {
+  const router = useRouter();
+  const { isSignedIn } = useAuth();
   const [text, setText] = useState("");
   const [showCursor, setShowCursor] = useState(true);
   const fullText = "parakletos";
+
+  useEffect(() => {
+    if (isSignedIn) {
+      router.push("/home");
+    }
+  }, [isSignedIn, router]);
 
   useEffect(() => {
     let i = 0;
@@ -53,14 +63,13 @@ export default function Component() {
             Your personal helper for sermon and bible study note-taking
           </p>
           <div className="flex justify-center space-x-4">
-            <Link href="/home">
-              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg w-40">
-                Log In
-              </Button>
-            </Link>
-            <Button className="bg-white hover:bg-emerald-50 text-emerald-600 font-bold py-3 px-6 rounded-full transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg border-2 border-emerald-600 w-40">
-              Create Account
-            </Button>
+            <SignedOut>
+              <SignInButton>
+                <button className="bg-white hover:bg-gray-100 text-emerald-600 font-bold py-3 px-6 rounded-full transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg w-40">
+                    Sign In
+                </button>
+              </SignInButton>
+            </SignedOut>
           </div>
         </animated.div>
       </div>
