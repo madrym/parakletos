@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Menu, Plus, Tag, X } from "lucide-react";
 import FileList, { File, GroupedFiles } from "@/components/FileList";
 import Link from "next/link";
-import { UserButton } from "@clerk/nextjs";
+import { UserButton, useUser } from "@clerk/nextjs";
 
 // Mock data for recently edited files and tags
 const recentFiles: File[] = [
@@ -67,7 +67,9 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagSearchTerm, setTagSearchTerm] = useState("");
-  const username = "John"; // This would typically come from your authentication system
+
+  const { user } = useUser();
+  const username = user?.firstName || "";
 
   const filteredFiles = recentFiles.filter(
     (file) =>
@@ -130,7 +132,7 @@ export default function Home() {
       <main className="p-4">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-semibold text-emerald-800">
-            Welcome, {username}
+            Welcome{username ? `, ${username}` : ""}
           </h1>
           <Dialog>
             <DialogTrigger asChild>
