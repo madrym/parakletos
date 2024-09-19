@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from "axios";
 
 interface ParsedReference {
   bookName: string;
@@ -56,43 +56,48 @@ export async function fetchChapterVerses(
   bookName: string,
   chapter: number,
   startVerse?: number,
-  endVerse?: number,
+  endVerse?: number
 ): Promise<ESVResponse> {
-  const verseRange = startVerse !== undefined ? `${startVerse}${endVerse !== undefined ? `-${endVerse}` : ''}` : '';
-  const url = `https://api.esv.org/v3/passage/text/?q=${bookName}${chapter}:${verseRange}&include-headings=false&include-verse-numbers=false&include-footnotes=false`;
+  const verseRange =
+    startVerse !== undefined
+      ? `${startVerse}${endVerse !== undefined ? `-${endVerse}` : ""}`
+      : "";
+  const url = `https://api.esv.org/v3/passage/text/?q=${bookName}${chapter}:${verseRange}&include-headings=false&include-footnotes=false&include-short-copyright=false`;
 
   const response = await axios.get<ESVResponse>(url, {
     headers: {
-      'Authorization': `Token ${process.env.ESV_API_TOKEN}`
-    }
+      Authorization: `Token ${process.env.ESV_API_TOKEN}`,
+    },
   });
 
   if (response.status !== 200) {
     throw new Error(`Failed to fetch data: ${response.statusText}`);
   }
 
-  return response.data
+  return response.data;
 }
 
 // Main function to get the Bible passage based on user input
-export async function getBiblePassage(
-  input: string
-) {
+export async function getBiblePassage(input: string) {
   try {
     // Step 1: Parse the reference
     const reference = parseBibleReference(input);
 
     // Step 2: Fetch the chapter data
-    const esvResponse = await fetchChapterVerses(reference.bookName, reference.chapter, reference.startVerse, reference.endVerse);
+    const esvResponse = await fetchChapterVerses(
+      reference.bookName,
+      reference.chapter,
+      reference.startVerse,
+      reference.endVerse
+    );
 
     const biblePassage: BiblePassage = {
       bookName: reference.bookName,
       chapter: reference.chapter,
-      esvResponse: esvResponse
+      esvResponse: esvResponse,
     };
 
     return biblePassage;
-
   } catch (error) {
     console.error((error as Error).message);
     throw error;

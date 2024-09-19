@@ -148,27 +148,25 @@ export default function NotePage() {
         throw new Error(data.error);
       }
 
-      // Assuming the structure of `data.passages` is a string of verses, split into an array
-      let passageText = data.esvResponse.passages[0]; // The full passage text
-      passageText = passageText.replace(/^[^\n]+\n\n/, ""); // Remove the first portion (e.g., "Matthew 5\n\n")
-      passageText = passageText.replace(/\s*\(ESV\)$/, ""); // Remove the ESV at the end
-      const verses = passageText
-        .split("\n\n")
-        .filter((verse: string) => verse.trim() !== ""); // Split verses by double newline
+      const passageText = data.esvResponse.passages[0];
+      const verseRegex = /\[(\d+)\]\s*([^[]+)/g;
+      const cleanedVerses = [];
+      let match;
 
-      // Calculate the start and end verse numbers from the response (these are likely available in `parsed` or `passage_meta`)
-      const startVerse =
-        data.esvResponse.passage_meta[0].chapter_start[0] % 1000; // Assuming verses are in form like 40005001 for Matthew 5:1
-      // const endVerse = data.esvResponse.passage_meta[0].chapter_end[1] % 1000;
+      while ((match = verseRegex.exec(passageText)) !== null) {
+        cleanedVerses.push({
+          number: parseInt(match[1], 10),
+          text: match[2].trim(),
+        });
+      }
 
-      // Construct the newSection object
       const newSection: Section = {
         id: uuidv4(),
-        title: `${data.esvResponse.canonical}`,
-        verses: verses.map((verseText: string, index: number) => ({
+        title: data.esvResponse.canonical,
+        verses: cleanedVerses.map((verse) => ({
           id: uuidv4(),
-          number: startVerse + index,
-          text: verseText.trim(),
+          number: verse.number,
+          text: verse.text,
         })),
         notes: [],
       };
@@ -203,7 +201,8 @@ export default function NotePage() {
       section.verses.some(
         (verse) =>
           selectedVerses.some(
-            (sv) => sv.sectionId === section.id && sv.verseNumber === verse.number
+            (sv) =>
+              sv.sectionId === section.id && sv.verseNumber === verse.number
           ) && verse.highlight
       )
     );
@@ -214,7 +213,8 @@ export default function NotePage() {
         verses: section.verses.map((verse) => {
           if (
             selectedVerses.some(
-              (sv) => sv.sectionId === section.id && sv.verseNumber === verse.number
+              (sv) =>
+                sv.sectionId === section.id && sv.verseNumber === verse.number
             )
           ) {
             return {
@@ -260,7 +260,9 @@ export default function NotePage() {
     (verseNumber: number, sectionId: string) => {
       const section = sections.find((s) => s.id === sectionId);
       return section
-        ? section.notes.filter((note) => note.verseNumbers.includes(verseNumber))
+        ? section.notes.filter((note) =>
+            note.verseNumbers.includes(verseNumber)
+          )
         : [];
     },
     [sections]
@@ -272,7 +274,8 @@ export default function NotePage() {
         section.verses
           .filter((verse) =>
             selectedVerses.some(
-              (sv) => sv.sectionId === section.id && sv.verseNumber === verse.number
+              (sv) =>
+                sv.sectionId === section.id && sv.verseNumber === verse.number
             )
           )
           .map((verse) => `${section.title} ${verse.number}. ${verse.text}`)
@@ -287,7 +290,8 @@ export default function NotePage() {
       section.verses.some(
         (verse) =>
           selectedVerses.some(
-            (sv) => sv.sectionId === section.id && sv.verseNumber === verse.number
+            (sv) =>
+              sv.sectionId === section.id && sv.verseNumber === verse.number
           ) && verse.highlight
       )
     );
