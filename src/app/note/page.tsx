@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Lightbulb, Pencil, Highlighter, Palette, Copy, Link as LinkIcon, Bold, Italic, List, ListOrdered, IndentIcon, OutdentIcon, X, GripVertical } from 'lucide-react';
+import { Lightbulb, Pencil, Highlighter, Palette, Copy, Link as LinkIcon, Bold, Italic, List, ListOrdered, IndentIcon, OutdentIcon, X } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { initialiseDB, getVerseFromDB, getVersesFromDB } from '@/utils/initDB';
 import nivData from '@/data/NIV.json';
@@ -16,8 +16,6 @@ import { Toaster, toast } from 'react-hot-toast';
 import { useEditor, EditorContent, Editor, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import OrderedList from '@tiptap/extension-ordered-list';
-import { useDrag } from '@use-gesture/react';
-import { useSpring, animated } from '@react-spring/web';
 
 interface Verse {
   id: string;
