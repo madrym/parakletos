@@ -13,9 +13,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { initialiseDB, getVerseFromDB, getVersesFromDB } from '@/utils/initDB';
 import nivData from '@/data/NIV.json';
 import { Toaster, toast } from 'react-hot-toast';
-import { useEditor, EditorContent, BubbleMenu, Editor } from '@tiptap/react';
+import { useEditor, EditorContent, Editor, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import OrderedList from '@tiptap/extension-ordered-list';
+import Placeholder from '@tiptap/extension-placeholder';
 
 interface Verse {
   id: string;
@@ -53,7 +54,7 @@ interface NIVData {
   }[];
 }
 
-const highlightColors = [
+const highlightColours = [
   "bg-yellow-200",
   "bg-green-200",
   "bg-blue-200",
@@ -73,7 +74,7 @@ export default function NotePage() {
   const [selectedVerses, setSelectedVerses] = useState<SelectedVerse[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState({ x: 0, y: 0 });
-  const [currentColor, setCurrentColor] = useState(highlightColors[0]);
+  const [currentColour, setCurrentColour] = useState(highlightColours[0]);
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [currentNote, setCurrentNote] = useState("");
   const [currentSectionId, setCurrentSectionId] = useState<string | null>(null);
@@ -93,7 +94,7 @@ export default function NotePage() {
     const text = editor.state.doc.textBetween(from - 30, to, ' ');
     const match = text.match(/(\w+\s?\d+:\d+(-\d+)?)\s?$/);
     const isNewLineOrSpace = editor.state.doc.textBetween(to - 1, to) === '\n' || editor.state.doc.textBetween(to - 1, to) === ' ';
-    
+
     if (match && !isNewLineOrSpace) {
       const verseReference = match[1];
       try {
@@ -120,6 +121,9 @@ export default function NotePage() {
     extensions: [
       StarterKit,
       OrderedList,
+      Placeholder.configure({
+        placeholder: 'Start writing your notes here... \n\nTry type a Bible verse to add it to your notes e.g. John 3:16 \n\nHighlight text to bold or make a list.',
+      }),
     ],
     content: '',
     onUpdate: handleEditorUpdate,
@@ -198,7 +202,7 @@ export default function NotePage() {
       };
 
       setSections((prevSections) => [...prevSections, newSection]);
-      setVerseReference(""); // Clear the input after adding
+      setVerseReference("");
       toast.success('Verse added successfully');
     } catch (err) {
       console.error("Error fetching passage:", err);
@@ -248,7 +252,7 @@ export default function NotePage() {
           ) {
             return {
               ...verse,
-              highlight: anyHighlighted ? undefined : currentColor,
+              highlight: anyHighlighted ? undefined : currentColour,
             };
           }
           return verse;
@@ -256,7 +260,7 @@ export default function NotePage() {
       }))
     );
     setSelectedVerses([]);
-  }, [sections, selectedVerses, currentColor]);
+  }, [sections, selectedVerses, currentColour]);
 
   const addBibleNote = useCallback(() => {
     if (currentNote.trim() && selectedVerses.length > 0 && currentSectionId) {
@@ -269,12 +273,12 @@ export default function NotePage() {
         prevSections.map((section) =>
           section.id === currentSectionId
             ? {
-                ...section,
-                notes: [
-                  ...section.notes,
-                  { id: uuidv4(), verseNumbers: sortedVerses, text: currentNote },
-                ],
-              }
+              ...section,
+              notes: [
+                ...section.notes,
+                { id: uuidv4(), verseNumbers: sortedVerses, text: currentNote },
+              ],
+            }
             : section
         )
       );
@@ -291,21 +295,21 @@ export default function NotePage() {
         const verseData = await getVerseFromDB(referenceText);
         if (verseData && verseData.verses.length > 0) {
           const referenceNote = `Reference: ${verseData.formattedReference} - ${verseData.verses[0].text}`;
-          
+
           setSections((prevSections) =>
             prevSections.map((section) =>
               section.id === currentSectionId
                 ? {
-                    ...section,
-                    notes: [
-                      ...section.notes,
-                      { id: uuidv4(), verseNumbers: selectedVerses.map(sv => sv.verseNumber), text: referenceNote },
-                    ],
-                  }
+                  ...section,
+                  notes: [
+                    ...section.notes,
+                    { id: uuidv4(), verseNumbers: selectedVerses.map(sv => sv.verseNumber), text: referenceNote },
+                  ],
+                }
                 : section
             )
           );
-          
+
           setReferenceText('');
           setIsReferencing(false);
           setSelectedVerses([]);
@@ -326,8 +330,8 @@ export default function NotePage() {
       const section = sections.find((s) => s.id === sectionId);
       return section
         ? section.notes.filter((note) =>
-            note.verseNumbers.includes(verseNumber)
-          )
+          note.verseNumbers.includes(verseNumber)
+        )
         : [];
     },
     [sections]
@@ -367,7 +371,7 @@ export default function NotePage() {
       const { from, to } = editor.state.selection;
       const text = editor.state.doc.textBetween(from - 20, to, ' ');
       const match = text.match(/(\w+\s\d+:\d+(-\d+)?)\s$/);
-      
+
       if (match) {
         const verseReference = match[1];
         try {
@@ -390,7 +394,7 @@ export default function NotePage() {
       }
     }
   };
-  
+
   const insertVerse = async (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
@@ -401,9 +405,9 @@ export default function NotePage() {
           const verseText = verseData.verses.map(v => `${v.verse}. ${v.text}`).join(' ');
           editor.chain()
             .focus()
-            .insertContent('<br>')  // Insert a line break
-            .insertContent(verseText)  // Insert the verse text
-            .insertContent('<br>')  // Insert another line break
+            .insertContent('<br>')
+            .insertContent(verseText)
+            .insertContent('<br>')
             .run();
           setShowVersePopover(false);
           toast.success('Verse inserted successfully');
@@ -419,7 +423,7 @@ export default function NotePage() {
     setIsVersePopupOpen(false);
     setPopupVerseText('');
   };
-  
+
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-emerald-50 p-4 relative">
@@ -477,280 +481,110 @@ export default function NotePage() {
           <TabsContent value="bible-passage">
             <div ref={containerRef} className="relative w-full h-[calc(100vh-300px)] overflow-auto">
               <div className="max-w-4xl mx-auto p-4 font-serif relative mt-8">
-
-          <div ref={containerRef} className="relative w-full h-[calc(100vh-200px)] overflow-auto">
-            <div className="max-w-4xl mx-auto p-4 font-serif relative mt-8">
-              {sections.map((section) => (
-                <div key={section.id} className="mb-6">
-                  <h2 className="text-xl font-bold mb-4">{section.title}</h2>
-                  <div className="flex">
-                    <div className="w-8 flex-shrink-0">
-                      {section.verses.map((verse) => {
-                        const notes = getNotesForVerse(verse.number, section.id);
-                        return (
-                          <div
-                            key={`note-icon-${section.id}-${verse.id}`}
-                            className="h-6 flex items-center justify-center"
-                          >
-                            {notes.length > 0 && (
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-4 w-4 p-0"
-                                    aria-label={`Show notes for verse ${verse.number}`}
-                                  >
-                                    <Lightbulb className="h-4 w-4 text-yellow-500" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-80 max-h-60 overflow-y-auto">
-                                  {notes.map((note) => (
-                                    <div
-                                      key={`note-${note.id}`}
-                                      className="mb-2 last:mb-0"
+                {sections.map((section) => (
+                  <div key={section.id} className="mb-6">
+                    <h2 className="text-xl font-bold mb-4">{section.title}</h2>
+                    <div className="flex">
+                      <div className="w-8 flex-shrink-0">
+                        {section.verses.map((verse) => {
+                          const notes = getNotesForVerse(verse.number, section.id);
+                          return (
+                            <div
+                              key={`note-icon-${section.id}-${verse.id}`}
+                              className="h-6 flex items-center justify-center"
+                            >
+                              {notes.length > 0 && (
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-4 w-4 p-0"
+                                      aria-label={`Show notes for verse ${verse.number}`}
                                     >
-                                      <p className="font-sans text-sm">
-                                        <span className="font-bold">
-                                          Verses {note.verseNumbers.join(", ")}:
-                                        </span>{" "}
-                                        {note.text}
-                                      </p>
-                                      <hr className="my-2" />
-                                    </div>
-                                  ))}
-                                </PopoverContent>
-                              </Popover>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="flex-grow">
-                      <div className="text-justify leading-relaxed">
-                        {section.verses.map((verse, vIndex) => (
-                          <React.Fragment key={`verse-${section.id}-${verse.id}`}>
-                            <sup
-                              className={`text-xs mr-1 font-sans cursor-pointer ${
-                                selectedVerses.some(
+                                      <Lightbulb className="h-4 w-4 text-yellow-500" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-80 max-h-60 overflow-y-auto">
+                                    {notes.map((note) => (
+                                      <div
+                                        key={`note-${note.id}`}
+                                        className="mb-2 last:mb-0"
+                                      >
+                                        <p className="font-sans text-sm">
+                                          <span className="font-bold">
+                                            Verses {note.verseNumbers.join(", ")}:
+                                          </span>{" "}
+                                          {note.text}
+                                        </p>
+                                        <hr className="my-2" />
+                                      </div>
+                                    ))}
+                                  </PopoverContent>
+                                </Popover>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="flex-grow">
+                        <div className="text-justify leading-relaxed">
+                          {section.verses.map((verse, vIndex) => (
+                            <React.Fragment key={`verse-${section.id}-${verse.id}`}>
+                              <sup
+                                className={`text-xs mr-1 font-sans cursor-pointer ${selectedVerses.some(
                                   (sv) =>
                                     sv.sectionId === section.id &&
                                     sv.verseNumber === verse.number
                                 )
                                   ? "bg-gray-200"
                                   : "text-gray-500"
-                              }`}
-                              onClick={() =>
-                                toggleVerseSelection(verse.number, section.id)
-                              }
-                            >
-                              {verse.number}
-                            </sup>
-                            <span
-                              className={`${verse.highlight || ""} ${
-                                selectedVerses.some(
+                                  }`}
+                                onClick={() =>
+                                  toggleVerseSelection(verse.number, section.id)
+                                }
+                              >
+                                {verse.number}
+                              </sup>
+                              <span
+                                className={`${verse.highlight || ""} ${selectedVerses.some(
                                   (sv) =>
                                     sv.sectionId === section.id &&
                                     sv.verseNumber === verse.number
                                 )
                                   ? "underline decoration-2 decoration-gray-500"
                                   : ""
-                              } cursor-pointer`}
-                              onClick={() =>
-                                toggleVerseSelection(verse.number, section.id)
-                              }
-                            >
-                              {verse.text}
-                            </span>
-                            {vIndex < section.verses.length - 1 && " "}
-                          </React.Fragment>
-                        ))}
+                                  } cursor-pointer`}
+                                onClick={() =>
+                                  toggleVerseSelection(verse.number, section.id)
+                                }
+                              >
+                                {verse.text}
+                              </span>
+                              {vIndex < section.verses.length - 1 && " "}
+                            </React.Fragment>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-          </div>
-          </div>
-
-          {showToolbar && (
-            <div
-              className="absolute bg-white shadow-lg rounded-lg p-2 flex space-x-2"
-              style={{
-                left: `${toolbarPosition.x}px`,
-                top: `${toolbarPosition.y}px`,
-              }}
-            >
-              <Dialog open={isAddingNote} onOpenChange={setIsAddingNote}>
-                <DialogTrigger asChild>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setIsAddingNote(true)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Add Note</TooltipContent>
-                  </Tooltip>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>
-                      Add Note for Verses{" "}
-                      {selectedVerses
-                        .filter((sv) => sv.sectionId === currentSectionId)
-                        .map((sv) => sv.verseNumber)
-                        .sort((a, b) => a - b)
-                        .join(", ")}
-                    </DialogTitle>
-                    <DialogDescription>
-                      Add a note to the selected verses.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <Textarea
-                    value={currentNote}
-                    onChange={(e) => setCurrentNote(e.target.value)}
-                    placeholder="Enter your note here..."
-                    className="w-full mb-2 bg-white"
-                    aria-label="Note Text"
-                    rows={4}
-                  />
-                  <Button onClick={addBibleNote} disabled={!currentNote.trim()}>
-                    Add Note
-                  </Button>
-                </DialogContent>
-              </Dialog>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleHighlight}
-                    className={
-                      isAnySelectedVerseHighlighted() ? "bg-gray-200" : ""
-                    }
-                    aria-label="Toggle Highlight"
-                  >
-                    <Highlighter className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {isAnySelectedVerseHighlighted()
-                    ? "Remove Highlight"
-                    : "Add Highlight"}
-                </TooltipContent>
-              </Tooltip>
-              <Popover>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={currentColor}
-                        aria-label="Select Highlight Color"
-                      >
-                        <Palette className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>Select Color</TooltipContent>
-                </Tooltip>
-                <PopoverContent className="w-40">
-                  <div className="grid grid-cols-4 gap-2">
-                    {highlightColors.map((color, index) => (
-                      <Button
-                        key={`highlight-color-${index}`}
-                        variant="ghost"
-                        size="sm"
-                        className={`w-8 h-8 ${color}`}
-                        onClick={() => setCurrentColor(color)}
-                        aria-label={`Select ${color} highlight`}
-                      />
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={copySelectedVerses}
-                    aria-label="Copy Selected Verses"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Copy</TooltipContent>
-              </Tooltip>
-              <Dialog open={isReferencing} onOpenChange={setIsReferencing}>
-                <DialogTrigger asChild>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setIsReferencing(true)}
-                      >
-                        <LinkIcon className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Reference Verse</TooltipContent>
-                  </Tooltip>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>
-                      Reference Verse for Verses{" "}
-                      {selectedVerses
-                        .filter((sv) => sv.sectionId === currentSectionId)
-                        .map((sv) => sv.verseNumber)
-                        .sort((a, b) => a - b)
-                        .join(", ")}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <Input
-                    value={referenceText}
-                    onChange={(e) => setReferenceText(e.target.value)}
-                    placeholder="Enter verse reference (e.g. John 3:16)"
-                    className="w-full mb-2"
-                    aria-label="Verse Reference"
-                  />
-                  <Button onClick={handleReferenceVerse} disabled={!referenceText.trim()}>
-                    Add Reference
-                  </Button>
-                </DialogContent>
-              </Dialog>
-            </div>
-          )}
-        <div className="mt-4">
-          <h3 className="text-lg font-bold mb-2">Bible Notes:</h3>
-          {sections.map((section) => (
-            <div key={section.id}>
-              <h4 className="text-md font-semibold mb-2">{section.title}</h4>
-              {section.notes.map((note, index) => (
-                <div key={index} className="bg-gray-100 p-2 rounded mb-2">
-                  <p className="font-bold">
-                    Verses: {note.verseNumbers.join(", ")}
-                  </p>
-                  <p>{note.text}</p>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-        </TabsContent>
-        <TabsContent value="notes">
+          </TabsContent>
+          <TabsContent value="notes">
             <div className="relative w-full h-[calc(100vh-300px)] overflow-auto">
               <div className="max-w-4xl mx-auto p-4 font-serif relative mt-8">
                 {editor && (
-                  <BubbleMenu className="bubble-menu bg-white shadow-lg rounded-lg p-2 flex space-x-2" tippyOptions={{ duration: 100 }} editor={editor}>
+                  <BubbleMenu
+                    editor={editor}
+                    tippyOptions={{
+                      hideOnClick: true,
+                      placement: 'top',
+                      offset: [20, 60], // Add about 16px (1em) of padding above the selection
+                    }}
+                    className="bg-white shadow-lg rounded-lg p-2 flex space-x-2 z-50"
+                  >
                     <Button
                       variant="outline"
                       size="sm"
@@ -799,11 +633,172 @@ export default function NotePage() {
                     </Button>
                   </BubbleMenu>
                 )}
-                <EditorContent editor={editor} onKeyDown={handleEditorKeyDown} className="bg-white p-4 rounded-lg shadow-sm min-h-[200px]" />
+                <div className="bg-white p-6 rounded-lg shadow-md border border-emerald-200">
+                  <EditorContent
+                    editor={editor}
+                    onKeyDown={handleEditorKeyDown}
+                    className="bg-emerald-50 p-4 rounded-lg shadow-inner min-h-[200px] focus-within:ring-2 focus-within:ring-emerald-300 transition-all duration-200"
+                    placeholder="Write your note here..."
+                  />
+                </div>
               </div>
             </div>
           </TabsContent>
         </Tabs>
+        {showToolbar && (
+          <div
+            className="absolute bg-white shadow-lg rounded-lg p-2 flex space-x-2"
+            style={{
+              left: `${toolbarPosition.x}px`,
+              top: `${toolbarPosition.y}px`,
+            }}
+          >
+            <Dialog open={isAddingNote} onOpenChange={setIsAddingNote}>
+              <DialogTrigger asChild>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsAddingNote(true)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Add Note</TooltipContent>
+                </Tooltip>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    Add Note for Verses{" "}
+                    {selectedVerses
+                      .filter((sv) => sv.sectionId === currentSectionId)
+                      .map((sv) => sv.verseNumber)
+                      .sort((a, b) => a - b)
+                      .join(", ")}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Add a note to the selected verses.
+                  </DialogDescription>
+                </DialogHeader>
+                <Textarea
+                  value={currentNote}
+                  onChange={(e) => setCurrentNote(e.target.value)}
+                  placeholder="Enter your note here..."
+                  className="w-full mb-2 bg-white"
+                  aria-label="Note Text"
+                  rows={4}
+                />
+                <Button onClick={addBibleNote} disabled={!currentNote.trim()}>
+                  Add Note
+                </Button>
+              </DialogContent>
+            </Dialog>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleHighlight}
+                  className={
+                    isAnySelectedVerseHighlighted() ? "bg-gray-200" : ""
+                  }
+                  aria-label="Toggle Highlight"
+                >
+                  <Highlighter className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isAnySelectedVerseHighlighted()
+                  ? "Remove Highlight"
+                  : "Add Highlight"}
+              </TooltipContent>
+            </Tooltip>
+            <Popover>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={currentColour}
+                      aria-label="Select Highlight Colour"
+                    >
+                      <Palette className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Select Colour</TooltipContent>
+              </Tooltip>
+              <PopoverContent className="w-40">
+                <div className="grid grid-cols-4 gap-2">
+                  {highlightColours.map((colour, index) => (
+                    <Button
+                      key={`highlight-colour-${index}`}
+                      variant="ghost"
+                      size="sm"
+                      className={`w-8 h-8 ${colour}`}
+                      onClick={() => setCurrentColour(colour)}
+                      aria-label={`Select ${colour} highlight`}
+                    />
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={copySelectedVerses}
+                  aria-label="Copy Selected Verses"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Copy</TooltipContent>
+            </Tooltip>
+            <Dialog open={isReferencing} onOpenChange={setIsReferencing}>
+              <DialogTrigger asChild>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsReferencing(true)}
+                    >
+                      <LinkIcon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Reference Verse</TooltipContent>
+                </Tooltip>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    Reference Verse for Verses{" "}
+                    {selectedVerses
+                      .filter((sv) => sv.sectionId === currentSectionId)
+                      .map((sv) => sv.verseNumber)
+                      .sort((a, b) => a - b)
+                      .join(", ")}
+                  </DialogTitle>
+                </DialogHeader>
+                <Input
+                  value={referenceText}
+                  onChange={(e) => setReferenceText(e.target.value)}
+                  placeholder="Enter verse reference (e.g. John 3:16)"
+                  className="w-full mb-2"
+                  aria-label="Verse Reference"
+                />
+                <Button onClick={handleReferenceVerse} disabled={!referenceText.trim()}>
+                  Add Reference
+                </Button>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
 
         {showVersePopover && (
           <div
@@ -816,9 +811,9 @@ export default function NotePage() {
           >
             <p>{versePopoverContent}</p>
             <div className="mt-2 flex justify-end space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={insertVerse}
               >
                 Insert
