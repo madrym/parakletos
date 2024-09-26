@@ -13,7 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { initialiseDB, getVerseFromDB, getVersesFromDB } from '@/utils/initDB';
 import nivData from '@/data/NIV.json';
 import { Toaster, toast } from 'react-hot-toast';
-import { useEditor, EditorContent, BubbleMenu, Editor } from '@tiptap/react';
+import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import OrderedList from '@tiptap/extension-ordered-list';
 import { useDrag } from '@use-gesture/react';
@@ -159,7 +159,7 @@ export default function NotePage() {
         
         if (down && isDraggingRef.current) {
           const currentY = y.get();
-          const scalingFactor = 0.03; // Adjust this value to control the speed (0.1 for slower, 0.9 for faster)
+          const scalingFactor = 0.03; // Adjust this value to control the speed (0.01 for slower, 0.9 for faster)
           const scaledMovement = my * scalingFactor;
           const newY = Math.max(0, Math.min(currentY + scaledMovement, window.innerHeight - (toolbarRef.current?.offsetHeight || 0)));
           api.start({ y: newY, immediate: true });
@@ -262,7 +262,7 @@ export default function NotePage() {
       };
 
       setSections((prevSections) => [...prevSections, newSection]);
-      setVerseReference(""); // Clear the input after adding
+      setVerseReference("");
       toast.success('Verse added successfully');
     } catch (err) {
       console.error("Error fetching passage:", err);
@@ -465,9 +465,9 @@ export default function NotePage() {
           const verseText = verseData.verses.map(v => `${v.verse}. ${v.text}`).join(' ');
           editor.chain()
             .focus()
-            .insertContent('<br>')  // Insert a line break
-            .insertContent(verseText)  // Insert the verse text
-            .insertContent('<br>')  // Insert another line break
+            .insertContent('<br>')
+            .insertContent(verseText)
+            .insertContent('<br>')
             .run();
           setShowVersePopover(false);
           toast.success('Verse inserted successfully');
