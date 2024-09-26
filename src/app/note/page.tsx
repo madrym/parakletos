@@ -16,6 +16,7 @@ import { Toaster, toast } from 'react-hot-toast';
 import { useEditor, EditorContent, Editor, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import OrderedList from '@tiptap/extension-ordered-list';
+import Placeholder from '@tiptap/extension-placeholder';
 
 interface Verse {
   id: string;
@@ -53,7 +54,7 @@ interface NIVData {
   }[];
 }
 
-const highlightColors = [
+const highlightColours = [
   "bg-yellow-200",
   "bg-green-200",
   "bg-blue-200",
@@ -73,7 +74,7 @@ export default function NotePage() {
   const [selectedVerses, setSelectedVerses] = useState<SelectedVerse[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState({ x: 0, y: 0 });
-  const [currentColor, setCurrentColor] = useState(highlightColors[0]);
+  const [currentColour, setCurrentColour] = useState(highlightColours[0]);
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [currentNote, setCurrentNote] = useState("");
   const [currentSectionId, setCurrentSectionId] = useState<string | null>(null);
@@ -93,7 +94,7 @@ export default function NotePage() {
     const text = editor.state.doc.textBetween(from - 30, to, ' ');
     const match = text.match(/(\w+\s?\d+:\d+(-\d+)?)\s?$/);
     const isNewLineOrSpace = editor.state.doc.textBetween(to - 1, to) === '\n' || editor.state.doc.textBetween(to - 1, to) === ' ';
-    
+
     if (match && !isNewLineOrSpace) {
       const verseReference = match[1];
       try {
@@ -120,6 +121,9 @@ export default function NotePage() {
     extensions: [
       StarterKit,
       OrderedList,
+      Placeholder.configure({
+        placeholder: 'Start writing your notes here... \n\nTry type a Bible verse to add it to your notes e.g. John 3:16 \n\nHighlight text to bold or make a list.',
+      }),
     ],
     content: '',
     onUpdate: handleEditorUpdate,
@@ -248,7 +252,7 @@ export default function NotePage() {
           ) {
             return {
               ...verse,
-              highlight: anyHighlighted ? undefined : currentColor,
+              highlight: anyHighlighted ? undefined : currentColour,
             };
           }
           return verse;
@@ -256,7 +260,7 @@ export default function NotePage() {
       }))
     );
     setSelectedVerses([]);
-  }, [sections, selectedVerses, currentColor]);
+  }, [sections, selectedVerses, currentColour]);
 
   const addBibleNote = useCallback(() => {
     if (currentNote.trim() && selectedVerses.length > 0 && currentSectionId) {
@@ -533,8 +537,8 @@ export default function NotePage() {
                                     sv.sectionId === section.id &&
                                     sv.verseNumber === verse.number
                                 )
-                                    ? "bg-gray-200"
-                                    : "text-gray-500"
+                                  ? "bg-gray-200"
+                                  : "text-gray-500"
                                   }`}
                                 onClick={() =>
                                   toggleVerseSelection(verse.number, section.id)
@@ -548,8 +552,8 @@ export default function NotePage() {
                                     sv.sectionId === section.id &&
                                     sv.verseNumber === verse.number
                                 )
-                                    ? "underline decoration-2 decoration-gray-500"
-                                    : ""
+                                  ? "underline decoration-2 decoration-gray-500"
+                                  : ""
                                   } cursor-pointer`}
                                 onClick={() =>
                                   toggleVerseSelection(verse.number, section.id)
@@ -629,16 +633,18 @@ export default function NotePage() {
                     </Button>
                   </BubbleMenu>
                 )}
-                <EditorContent 
-                  editor={editor} 
-                  onKeyDown={handleEditorKeyDown} 
-                  className="bg-white p-4 rounded-lg shadow-sm min-h-[200px]"
-                />
+                <div className="bg-white p-6 rounded-lg shadow-md border border-emerald-200">
+                  <EditorContent
+                    editor={editor}
+                    onKeyDown={handleEditorKeyDown}
+                    className="bg-emerald-50 p-4 rounded-lg shadow-inner min-h-[200px] focus-within:ring-2 focus-within:ring-emerald-300 transition-all duration-200"
+                    placeholder="Write your note here..."
+                  />
+                </div>
               </div>
             </div>
           </TabsContent>
         </Tabs>
-
         {showToolbar && (
           <div
             className="absolute bg-white shadow-lg rounded-lg p-2 flex space-x-2"
@@ -716,25 +722,25 @@ export default function NotePage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={currentColor}
-                      aria-label="Select Highlight Color"
+                      className={currentColour}
+                      aria-label="Select Highlight Colour"
                     >
                       <Palette className="h-4 w-4" />
                     </Button>
                   </PopoverTrigger>
                 </TooltipTrigger>
-                <TooltipContent>Select Color</TooltipContent>
+                <TooltipContent>Select Colour</TooltipContent>
               </Tooltip>
               <PopoverContent className="w-40">
                 <div className="grid grid-cols-4 gap-2">
-                  {highlightColors.map((color, index) => (
+                  {highlightColours.map((colour, index) => (
                     <Button
-                      key={`highlight-color-${index}`}
+                      key={`highlight-colour-${index}`}
                       variant="ghost"
                       size="sm"
-                      className={`w-8 h-8 ${color}`}
-                      onClick={() => setCurrentColor(color)}
-                      aria-label={`Select ${color} highlight`}
+                      className={`w-8 h-8 ${colour}`}
+                      onClick={() => setCurrentColour(colour)}
+                      aria-label={`Select ${colour} highlight`}
                     />
                   ))}
                 </div>
@@ -794,7 +800,7 @@ export default function NotePage() {
           </div>
         )}
 
-{showVersePopover && (
+        {showVersePopover && (
           <div
             ref={popoverRef}
             className="absolute bg-white shadow-lg rounded-lg p-2 z-50"
@@ -805,9 +811,9 @@ export default function NotePage() {
           >
             <p>{versePopoverContent}</p>
             <div className="mt-2 flex justify-end space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={insertVerse}
               >
                 Insert
