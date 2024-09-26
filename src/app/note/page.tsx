@@ -13,10 +13,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { initialiseDB, getVerseFromDB, getVersesFromDB } from '@/utils/initDB';
 import nivData from '@/data/NIV.json';
 import { Toaster, toast } from 'react-hot-toast';
-import { useEditor, EditorContent, BubbleMenu, Editor, EditorEvents } from '@tiptap/react';
+import { useEditor, EditorContent, BubbleMenu, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import OrderedList from '@tiptap/extension-ordered-list';
-import Link from '@tiptap/extension-link';
 
 interface Verse {
   id: string;
