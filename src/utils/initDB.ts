@@ -149,27 +149,57 @@ const bookAbbreviations: { [key: string]: string } = {
   '2jn': '2 John',
   '3jn': '3 John',
   'jude': 'Jude',
-  'rev': 'Revelation'
+  'rev': 'Revelation',
+  '1john': '1 John',
+  '2john': '2 John',
+  '3john': '3 John',
+  '1kings': '1 Kings',
+  '2kings': '2 Kings',
+  '1chronicles': '1 Chronicles',
+  '2chronicles': '2 Chronicles',
+  '1corinthians': '1 Corinthians',
+  '2corinthians': '2 Corinthians',
+  '1thessalonians': '1 Thessalonians',
+  '2thessalonians': '2 Thessalonians',
+  '1timothy': '1 Timothy',
+  '2timothy': '2 Timothy',
+  '1peter': '1 Peter',
+  '2peter': '2 Peter'
 };
 
 function parseReference(reference: string): { book: string, chapter: number, verse?: number, endVerse?: number } {
-  const chapterOnlyMatch = reference.match(/^(\d?\s?[a-z]+)(\d+)$/i);
-  const verseMatch = reference.match(/^(\d?\s?[a-z]+)(\d+):(\d+)(-(\d+))?$/i);
+  // Normalize spaces: ensure single space between words, trim ends
+  const normalizedReference = reference.replace(/\s+/g, ' ').trim();
   
-  if (!chapterOnlyMatch && !verseMatch) throw new Error('Invalid reference format');
-
+  // Updated regex patterns to handle various formats
+  const chapterOnlyMatch = normalizedReference.match(/^(\d?\s?[a-z]+(?:\s[a-z]+)?)\s?(\d+)$/i);
+  const verseMatch = normalizedReference.match(/^(\d?\s?[a-z]+(?:\s[a-z]+)?)\s?(\d+):(\d+)(-(\d+))?$/i);
+  
   let book: string, chapter: string, verse: string | undefined, endVerse: string | undefined;
 
-  if (chapterOnlyMatch) {
+  if (!chapterOnlyMatch && !verseMatch) {
+    // Try to match references without spaces like "1John1"
+    const noSpaceMatch = normalizedReference.match(/^(\d?[a-z]+)(\d+)$/i);
+    if (noSpaceMatch) {
+      [, book, chapter] = noSpaceMatch;
+    } else {
+      throw new Error('Invalid reference format');
+    }
+  } else if (chapterOnlyMatch) {
     [, book, chapter] = chapterOnlyMatch;
   } else {
     [, book, chapter, verse, , endVerse] = verseMatch!;
   }
 
-  book = book.toLowerCase().replace(/\s/g, '');
+  // Normalize the book name
+  book = book.toLowerCase().replace(/\s+/g, '');
   
   // Handle book abbreviations
-  const fullBookName = Object.entries(bookAbbreviations).find(([abbr, ]) => book.startsWith(abbr))?.[1];
+  const fullBookName = Object.entries(bookAbbreviations).find(([abbr, ]) => {
+    const normalizedAbbr = abbr.toLowerCase().replace(/\s+/g, '');
+    return book === normalizedAbbr || book.startsWith(normalizedAbbr);
+  })?.[1];
+
   if (fullBookName) {
     book = fullBookName;
   } else {
@@ -196,39 +226,39 @@ export async function getVersesFromDB(reference: string): Promise<VerseResult> {
   let results: BibleVerse[];
   let formattedReference: string;
 
+  // Get all verses from the chapter
+  results = await db.verses
+    .where('[book+chapter]')
+    .equals([book, chapter])
+    .toArray();
+
+  if (results.length === 0) {
+    return {
+      formattedReference: `${book} ${chapter}`,
+      verses: []
+    };
+  }
+
+  const maxVerse = Math.max(...results.map(v => v.verse));
+
   if (verse === undefined) {
-    // If no verse is specified, get all verses from the chapter
-    results = await db.verses
-      .where('[book+chapter]')
-      .equals([book, chapter])
-      .toArray();
-    
-    if (results.length > 0) {
-      const firstVerse = results[0].verse;
-      const lastVerse = results[results.length - 1].verse;
-      formattedReference = `${book} ${chapter}:${firstVerse}-${lastVerse}`;
-    } else {
-      formattedReference = `${book} ${chapter}`;
-    }
+    // If no verse is specified, return all verses from the chapter
+    formattedReference = `${book} ${chapter}:1-${maxVerse}`;
   } else {
-    // If a verse is specified, use the previous logic
-    results = await db.verses
-      .where('[book+chapter+verse]')
-      .between(
-        [book, chapter, verse],
-        [book, chapter, endVerse || verse],
-        true,
-        true
-      )
-      .toArray();
+    // If a verse is specified, filter the results
+    const startVerse = Math.min(verse, maxVerse);
+    const actualEndVerse = endVerse ? Math.min(endVerse, maxVerse) : startVerse;
     
-    formattedReference = `${book} ${chapter}:${verse}`;
-    if (endVerse && endVerse !== verse) {
-      formattedReference += `-${endVerse}`;
+    results = results.filter(v => v.verse >= startVerse && v.verse <= actualEndVerse);
+    
+    formattedReference = `${book} ${chapter}:${startVerse}`;
+    if (actualEndVerse !== startVerse) {
+      formattedReference += `-${actualEndVerse}`;
     }
   }
-  
-  results.forEach(verse => console.log(`Retrieved verse: ${verse.text}`));
+
+  // Ensure proper spacing in the formatted reference
+  formattedReference = formattedReference.replace(/(\d)([A-Z])/g, '$1 $2');
 
   return {
     formattedReference,

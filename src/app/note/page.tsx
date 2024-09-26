@@ -13,7 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { initialiseDB, getVerseFromDB, getVersesFromDB } from '@/utils/initDB';
 import nivData from '@/data/NIV.json';
 import { Toaster, toast } from 'react-hot-toast';
-import { useEditor, EditorContent, Editor } from '@tiptap/react';
+import { useEditor, EditorContent, Editor, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import OrderedList from '@tiptap/extension-ordered-list';
 import { useDrag } from '@use-gesture/react';
@@ -87,10 +87,6 @@ export default function NotePage() {
   const [isVersePopupOpen, setIsVersePopupOpen] = useState(false);
   const [popupVerseText, setPopupVerseText] = useState('');
   const [currentVerseReference, setCurrentVerseReference] = useState('');
-  const [showFormatToolbar, setShowFormatToolbar] = useState(false);
-  const [{ y }, api] = useSpring(() => ({ y: 100 }));
-  const toolbarRef = useRef<HTMLDivElement>(null);
-  const isDraggingRef = useRef(false);
 
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -99,7 +95,7 @@ export default function NotePage() {
     const text = editor.state.doc.textBetween(from - 30, to, ' ');
     const match = text.match(/(\w+\s?\d+:\d+(-\d+)?)\s?$/);
     const isNewLineOrSpace = editor.state.doc.textBetween(to - 1, to) === '\n' || editor.state.doc.textBetween(to - 1, to) === ' ';
-
+    
     if (match && !isNewLineOrSpace) {
       const verseReference = match[1];
       try {
@@ -131,68 +127,10 @@ export default function NotePage() {
     onUpdate: handleEditorUpdate,
   });
 
-  const handleSelectionChange = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      const selection = window.getSelection();
-      if (selection && !selection.isCollapsed) {
-        setShowFormatToolbar(true);
-      } else {
-        setShowFormatToolbar(false);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener('selectionchange', handleSelectionChange);
-    return () => {
-      document.removeEventListener('selectionchange', handleSelectionChange);
-    };
-  }, [handleSelectionChange]);
-
-  const bindDragHandlers = useCallback(
-    useDrag(
-      ({ movement: [, my], down, first, last }) => {
-        if (first) {
-          isDraggingRef.current = true;
-          toolbarRef.current?.classList.add('dragging');
-        }
-        
-        if (down && isDraggingRef.current) {
-          const currentY = y.get();
-          const scalingFactor = 0.03; // Adjust this value to control the speed (0.01 for slower, 0.9 for faster)
-          const scaledMovement = my * scalingFactor;
-          const newY = Math.max(0, Math.min(currentY + scaledMovement, window.innerHeight - (toolbarRef.current?.offsetHeight || 0)));
-          api.start({ y: newY, immediate: true });
-        }
-
-        if (last) {
-          isDraggingRef.current = false;
-          toolbarRef.current?.classList.remove('dragging');
-        }
-      },
-      {
-        axis: 'y',
-        bounds: { top: 0, bottom: typeof window !== 'undefined' ? window.innerHeight - (toolbarRef.current?.offsetHeight || 0) : 0 },
-        from: () => [0, y.get()],
-        rubberband: true,
-      }
-    ),
-    [y, api]
-  );
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Handle verse popover
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
         setShowVersePopover(false);
-      }
-
-      // Handle format toolbar
-      if (toolbarRef.current && !toolbarRef.current.contains(event.target as Node)) {
-        // Only close the toolbar if we're not currently dragging
-        if (!isDraggingRef.current) {
-          setShowFormatToolbar(false);
-        }
       }
     };
 
@@ -538,7 +476,6 @@ export default function NotePage() {
             <TabsTrigger value="bible-passage">Bible Passage</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
           </TabsList>
-
           <TabsContent value="bible-passage">
             <div ref={containerRef} className="relative w-full h-[calc(100vh-300px)] overflow-auto">
               <div className="max-w-4xl mx-auto p-4 font-serif relative mt-8">
@@ -632,31 +569,71 @@ export default function NotePage() {
                 ))}
               </div>
             </div>
-
-            <div className="mt-4">
-              <h3 className="text-lg font-bold mb-2">Bible Notes:</h3>
-              {sections.map((section) => (
-                <div key={section.id}>
-                  <h4 className="text-md font-semibold mb-2">{section.title}</h4>
-                  {section.notes.map((note, index) => (
-                    <div key={index} className="bg-gray-100 p-2 rounded mb-2">
-                      <p className="font-bold">
-                        Verses: {note.verseNumbers.join(", ")}
-                      </p>
-                      <p>{note.text}</p>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
           </TabsContent>
-
           <TabsContent value="notes">
             <div className="relative w-full h-[calc(100vh-300px)] overflow-auto">
               <div className="max-w-4xl mx-auto p-4 font-serif relative mt-8">
-                <EditorContent
-                  editor={editor}
-                  onKeyDown={handleEditorKeyDown}
+                {editor && (
+                  <BubbleMenu
+                    editor={editor}
+                    tippyOptions={{
+                      hideOnClick: true,
+                      placement: 'top',
+                      offset: [20, 60], // Add about 16px (1em) of padding above the selection
+                    }}
+                    className="bg-white shadow-lg rounded-lg p-2 flex space-x-2 z-50"
+                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => editor.chain().focus().toggleBold().run()}
+                      className={editor.isActive('bold') ? 'bg-gray-200' : ''}
+                    >
+                      <Bold className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => editor.chain().focus().toggleItalic().run()}
+                      className={editor.isActive('italic') ? 'bg-gray-200' : ''}
+                    >
+                      <Italic className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => editor.chain().focus().toggleBulletList().run()}
+                      className={editor.isActive('bulletList') ? 'bg-gray-200' : ''}
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                      className={editor.isActive('orderedList') ? 'bg-gray-200' : ''}
+                    >
+                      <ListOrdered className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
+                    >
+                      <IndentIcon className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => editor.chain().focus().liftListItem('listItem').run()}
+                    >
+                      <OutdentIcon className="h-4 w-4" />
+                    </Button>
+                  </BubbleMenu>
+                )}
+                <EditorContent 
+                  editor={editor} 
+                  onKeyDown={handleEditorKeyDown} 
                   className="bg-white p-4 rounded-lg shadow-sm min-h-[200px]"
                 />
               </div>
@@ -819,112 +796,42 @@ export default function NotePage() {
           </div>
         )}
 
-{showFormatToolbar && editor && (
-      <animated.div 
-        ref={toolbarRef}
-        className="fixed left-0 bg-white shadow-lg p-2 rounded-r-lg space-y-2 z-50"
-        style={{ top: y }}
-      >
-            <div
-              {...bindDragHandlers()}
-              className="cursor-move flex justify-center items-center h-6 mb-2 bg-gray-100 rounded"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                isDraggingRef.current = true;
-              }}
-              onMouseUp={() => {
-                isDraggingRef.current = false;
-              }}
-            >
-              <GripVertical className="h-4 w-4 text-gray-400" />
-            </div>
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => editor.chain().focus().toggleBold().run()}
-                className={editor.isActive('bold') ? 'bg-gray-200' : ''}
+{showVersePopover && (
+          <div
+            ref={popoverRef}
+            className="absolute bg-white shadow-lg rounded-lg p-2 z-50"
+            style={{
+              left: `${versePopoverPosition.x}px`,
+              top: `${versePopoverPosition.y}px`,
+            }}
+          >
+            <p>{versePopoverContent}</p>
+            <div className="mt-2 flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={insertVerse}
               >
-                <Bold className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => editor.chain().focus().toggleItalic().run()}
-                className={editor.isActive('italic') ? 'bg-gray-200' : ''}
-              >
-                <Italic className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => editor.chain().focus().toggleBulletList().run()}
-                className={editor.isActive('bulletList') ? 'bg-gray-200' : ''}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                className={editor.isActive('orderedList') ? 'bg-gray-200' : ''}
-              >
-                <ListOrdered className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
-              >
-                <IndentIcon className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => editor.chain().focus().liftListItem('listItem').run()}
-              >
-                <OutdentIcon className="h-4 w-4" />
+                Insert
               </Button>
             </div>
-          </animated.div>
+          </div>
         )}
 
-            {showVersePopover && (
-              <div
-                ref={popoverRef}
-                className="absolute bg-white shadow-lg rounded-lg p-2 z-50"
-                style={{
-                  left: `${versePopoverPosition.x}px`,
-                  top: `${versePopoverPosition.y}px`,
-                }}
-              >
-                <p>{versePopoverContent}</p>
-                <div className="mt-2 flex justify-end space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={insertVerse}
-                  >
-                    Insert
-                  </Button>
-                </div>
+        {isVersePopupOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-4 rounded-lg shadow-lg max-w-md w-full">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-lg font-semibold">Verse Reference</h3>
+                <Button variant="ghost" size="sm" onClick={closeVersePopup}>
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-            )}
-
-            {isVersePopupOpen && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white p-4 rounded-lg shadow-lg max-w-md w-full">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-lg font-semibold">Verse Reference</h3>
-                    <Button variant="ghost" size="sm" onClick={closeVersePopup}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <p>{popupVerseText}</p>
-                </div>
-              </div>
-            )}
+              <p>{popupVerseText}</p>
+            </div>
           </div>
+        )}
+      </div>
     </TooltipProvider>
   );
 }
