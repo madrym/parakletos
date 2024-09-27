@@ -447,6 +447,11 @@ export default function NotePage() {
     setEditingNote(null);
   };
 
+  const handleRemoveSection = useCallback((sectionId: string) => {
+    setSections(prevSections => prevSections.filter(section => section.id !== sectionId));
+    toast.success('Bible passage removed successfully');
+  }, []);
+
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-emerald-50 p-4 relative">
@@ -505,93 +510,74 @@ export default function NotePage() {
             <div ref={containerRef} className="relative w-full h-[calc(100vh-300px)] overflow-auto">
               <div className="max-w-4xl mx-auto p-4 font-serif relative mt-8">
                 {sections.map((section) => (
-                  <div key={section.id} className="mb-6">
-                    <h2 className="text-xl font-bold mb-4">{section.title}</h2>
-                    <div className="flex">
-                      <div className="w-8 flex-shrink-0">
-                        {section.verses.map((verse) => {
-                          const notes = getNotesForVerse(verse.number, section.id);
-                          return (
-                            <div
-                              key={`note-icon-${section.id}-${verse.id}`}
-                              className="h-6 flex items-center justify-center"
-                            >
-                              {notes.length > 0 && (
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-4 w-4 p-0"
-                                      aria-label={`Show notes for verse ${verse.number}`}
-                                    >
-                                      <Lightbulb className="h-4 w-4 text-yellow-500" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-80">
-                                    <div className="space-y-2">
-                                      <h3 className="font-medium">Notes for Verse {verse.number}</h3>
-                                      {notes.map((note) => (
-                                        <div key={note.id} className="text-sm">
-                                          <p>{note.text}</p>
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="mt-1"
-                                            onClick={() => handleEditNote(note)}
-                                          >
-                                            Edit Note
-                                          </Button>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </PopoverContent>
-                                </Popover>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="flex-grow">
-                        <div className="text-justify leading-relaxed">
-                          {section.verses.map((verse, vIndex) => (
-                            <React.Fragment key={`verse-${section.id}-${verse.id}`}>
-                              <sup
-                                className={`text-xs mr-1 font-sans cursor-pointer ${selectedVerses.some(
-                                  (sv) =>
-                                    sv.sectionId === section.id &&
-                                    sv.verseNumber === verse.number
-                                )
-                                  ? "bg-gray-200"
-                                  : "text-gray-500"
-                                  }`}
-                                onClick={() =>
-                                  toggleVerseSelection(verse.number, section.id)
-                                }
-                              >
-                                {verse.number}
-                              </sup>
-                              <span
-                                className={`${verse.highlight || ""} ${selectedVerses.some(
-                                  (sv) =>
-                                    sv.sectionId === section.id &&
-                                    sv.verseNumber === verse.number
-                                )
-                                  ? "underline decoration-2 decoration-gray-500"
-                                  : ""
-                                  } cursor-pointer`}
-                                onClick={() =>
-                                  toggleVerseSelection(verse.number, section.id)
-                                }
-                              >
-                                {verse.text}
-                              </span>
-                              {vIndex < section.verses.length - 1 && " "}
-                            </React.Fragment>
-                          ))}
-                        </div>
-                      </div>
+                  <div key={section.id} className="mb-6 relative">
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-xl font-bold">{section.title}</h2>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveSection(section.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
+                    {section.verses.map((verse) => {
+                      const notes = getNotesForVerse(verse.number, section.id);
+                      return (
+                        <div key={`verse-${section.id}-${verse.id}`} className="flex items-start mb-2">
+                          <div className="w-8 flex-shrink-0 flex items-center justify-end mr-2">
+                            <span className="text-sm font-semibold">{verse.number}</span>
+                            {notes.length > 0 && (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-4 w-4 p-0 ml-1"
+                                    aria-label={`Show notes for verse ${verse.number}`}
+                                  >
+                                    <Lightbulb className="h-4 w-4 text-yellow-500" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80">
+                                  <div className="space-y-2">
+                                    <h3 className="font-medium">Notes for Verse {verse.number}</h3>
+                                    {notes.map((note) => (
+                                      <div key={note.id} className="text-sm">
+                                        <p>{note.text}</p>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="mt-1"
+                                          onClick={() => handleEditNote(note)}
+                                        >
+                                          Edit Note
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            )}
+                          </div>
+                          <span
+                            className={`flex-grow ${verse.highlight || ""} ${
+                              selectedVerses.some(
+                                (sv) =>
+                                  sv.sectionId === section.id &&
+                                  sv.verseNumber === verse.number
+                              )
+                                ? "underline decoration-2 decoration-gray-500"
+                                : ""
+                            } cursor-pointer`}
+                            onClick={() => toggleVerseSelection(verse.number, section.id)}
+                          >
+                            {verse.text}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 ))}
               </div>
@@ -633,7 +619,7 @@ export default function NotePage() {
                     tippyOptions={{
                       hideOnClick: true,
                       placement: 'top',
-                      offset: [20, 60],
+                      offset: [20,60],
                     }}
                     className="bg-white shadow-lg rounded-lg p-2 flex space-x-2 z-50"
                   >
