@@ -17,6 +17,12 @@ import { useEditor, EditorContent, Editor, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import OrderedList from '@tiptap/extension-ordered-list';
 import Placeholder from '@tiptap/extension-placeholder';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface Verse {
   id: string;
@@ -86,6 +92,7 @@ export default function NotePage() {
   const [isVersePopupOpen, setIsVersePopupOpen] = useState(false);
   const [popupVerseText, setPopupVerseText] = useState('');
   const [currentVerseReference, setCurrentVerseReference] = useState('');
+  const [editingNote, setEditingNote] = useState<BibleNote | null>(null);
 
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -424,6 +431,22 @@ export default function NotePage() {
     setPopupVerseText('');
   };
 
+  const handleEditNote = (note: BibleNote) => {
+    setEditingNote(note);
+  };
+
+  const handleSaveNote = (id: string, newText: string) => {
+    setSections(prevSections =>
+      prevSections.map(section => ({
+        ...section,
+        notes: section.notes.map(note =>
+          note.id === id ? { ...note, text: newText } : note
+        )
+      }))
+    );
+    setEditingNote(null);
+  };
+
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-emerald-50 p-4 relative">
@@ -505,21 +528,23 @@ export default function NotePage() {
                                       <Lightbulb className="h-4 w-4 text-yellow-500" />
                                     </Button>
                                   </PopoverTrigger>
-                                  <PopoverContent className="w-80 max-h-60 overflow-y-auto">
-                                    {notes.map((note) => (
-                                      <div
-                                        key={`note-${note.id}`}
-                                        className="mb-2 last:mb-0"
-                                      >
-                                        <p className="font-sans text-sm">
-                                          <span className="font-bold">
-                                            Verses {note.verseNumbers.join(", ")}:
-                                          </span>{" "}
-                                          {note.text}
-                                        </p>
-                                        <hr className="my-2" />
-                                      </div>
-                                    ))}
+                                  <PopoverContent className="w-80">
+                                    <div className="space-y-2">
+                                      <h3 className="font-medium">Notes for Verse {verse.number}</h3>
+                                      {notes.map((note) => (
+                                        <div key={note.id} className="text-sm">
+                                          <p>{note.text}</p>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="mt-1"
+                                            onClick={() => handleEditNote(note)}
+                                          >
+                                            Edit Note
+                                          </Button>
+                                        </div>
+                                      ))}
+                                    </div>
                                   </PopoverContent>
                                 </Popover>
                               )}
@@ -570,6 +595,33 @@ export default function NotePage() {
                   </div>
                 ))}
               </div>
+              <Accordion type="single" collapsible className="w-full mt-8">
+                <AccordionItem value="notes">
+                  <AccordionTrigger>View All Notes</AccordionTrigger>
+                  <AccordionContent>
+                    {sections.flatMap((section) =>
+                      section.notes.map((note) => (
+                        <div key={note.id} className="mb-4 p-4 bg-white rounded-lg shadow">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="font-semibold">
+                              {section.title} - Verses {note.verseNumbers.join(", ")}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditNote(note)}
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </Button>
+                          </div>
+                          <p>{note.text}</p>
+                        </div>
+                      ))
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </div>
           </TabsContent>
           <TabsContent value="notes">
@@ -581,7 +633,7 @@ export default function NotePage() {
                     tippyOptions={{
                       hideOnClick: true,
                       placement: 'top',
-                      offset: [20, 60], // Add about 16px (1em) of padding above the selection
+                      offset: [20, 60],
                     }}
                     className="bg-white shadow-lg rounded-lg p-2 flex space-x-2 z-50"
                   >
@@ -637,7 +689,7 @@ export default function NotePage() {
                   <EditorContent
                     editor={editor}
                     onKeyDown={handleEditorKeyDown}
-                    className="bg-emerald-50 p-4 rounded-lg shadow-inner min-h-[200px] focus-within:ring-2 focus-within:ring-emerald-300 transition-all duration-200"
+                    className="p-4 rounded-lg shadow-inner min-h-[200px] focus-within:ring-2 focus-within:ring-emerald-300 transition-all duration-200"
                     placeholder="Write your note here..."
                   />
                 </div>
@@ -835,6 +887,26 @@ export default function NotePage() {
             </div>
           </div>
         )}
+
+        <Dialog open={!!editingNote} onOpenChange={() => setEditingNote(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Note</DialogTitle>
+              <DialogDescription>
+                Edit your note for verses {editingNote?.verseNumbers.join(', ')}
+              </DialogDescription>
+            </DialogHeader>
+            <Textarea
+              value={editingNote?.text || ''}
+              onChange={(e) => setEditingNote(prev => prev ? { ...prev, text: e.target.value } : null)}
+              className="w-full mb-2"
+              rows={4}
+            />
+            <Button onClick={() => editingNote && handleSaveNote(editingNote.id, editingNote.text)}>
+              Save Changes
+            </Button>
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );
