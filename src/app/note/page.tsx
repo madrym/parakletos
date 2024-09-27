@@ -23,43 +23,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-
-interface Verse {
-  id: string;
-  number: number;
-  text: string;
-  highlight?: string;
-}
-
-interface Section {
-  id: string;
-  title: string;
-  verses: Verse[];
-  notes: BibleNote[];
-}
-
-interface SelectedVerse {
-  sectionId: string;
-  verseNumber: number;
-}
-
-interface BibleNote {
-  id: string;
-  verseNumbers: number[];
-  text: string;
-}
-
-interface NIVData {
-  book: string;
-  chapters: {
-    chapter: number;
-    verses: {
-      verse: number;
-      text: string;
-    }[];
-  }[];
-}
-
+import { Section, BibleNote, NIVData, SelectedVerse } from '@/app/types';
 const highlightColours = [
   "bg-yellow-200",
   "bg-green-200",
@@ -562,15 +526,14 @@ export default function NotePage() {
                             )}
                           </div>
                           <span
-                            className={`flex-grow ${verse.highlight || ""} ${
-                              selectedVerses.some(
-                                (sv) =>
-                                  sv.sectionId === section.id &&
-                                  sv.verseNumber === verse.number
-                              )
+                            className={`flex-grow ${verse.highlight || ""} ${selectedVerses.some(
+                              (sv) =>
+                                sv.sectionId === section.id &&
+                                sv.verseNumber === verse.number
+                            )
                                 ? "underline decoration-2 decoration-gray-500"
                                 : ""
-                            } cursor-pointer`}
+                              } cursor-pointer`}
                             onClick={() => toggleVerseSelection(verse.number, section.id)}
                           >
                             {verse.text}
@@ -619,7 +582,7 @@ export default function NotePage() {
                     tippyOptions={{
                       hideOnClick: true,
                       placement: 'top',
-                      offset: [20,60],
+                      offset: [20, 60],
                     }}
                     className="bg-white shadow-lg rounded-lg p-2 flex space-x-2 z-50"
                   >
