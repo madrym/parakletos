@@ -272,3 +272,7 @@
   border: 1px solid #10b981;
   border-radius: 4px;
 }
+
+.clip-path-right-angle {
+  clip-path: polygon(0 0, 0 50%, 52% 50%, 52% 100%, 100% 100%, 100% 0);
+}
