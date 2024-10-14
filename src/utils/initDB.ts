@@ -1,23 +1,5 @@
 import Dexie from 'dexie';
-
-interface BibleVerse {
-  id?: number;
-  book: string;
-  chapter: number;
-  verse: number;
-  text: string;
-}
-
-interface NIVData {
-  book: string;
-  chapters: {
-    chapter: number;
-    verses: {
-      verse: number;
-      text: string;
-    }[];
-  }[];
-}
+import { NIVData, BibleVerse } from '@/app/types';
 
 class BibleDatabase extends Dexie {
   verses!: Dexie.Table<BibleVerse, number>;

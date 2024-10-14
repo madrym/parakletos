@@ -1,19 +1,39 @@
 'use client'
 
 import React from 'react'
-import { useUser } from '@clerk/nextjs'
+import { useAuth, useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from 'next/link'
+import { useMutation, useQuery } from "convex/react"
+import { api } from "../../../convex/_generated/api"
+import { toast } from "react-hot-toast"
+import { Id } from "../../../convex/_generated/dataModel";
 
 export default function HomePage() {
   const { user } = useUser()
   const router = useRouter()
-
+  const createNote = useMutation(api.notes.createNote)
+  const convexUser = useQuery(api.users.getUser, { tokenIdentifier: user?.id ?? '' })
   const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     router.push('/search')
+  }
+
+  const handleCreateNote = async () => {
+    if (!convexUser) {
+      console.error("User not found in Convex");
+      return;
+    }
+
+    const newNoteId = await createNote({
+      userId: convexUser._id,
+      title: "New Note",
+      topics: [],
+    });
+    
+    router.push(`/notes/${newNoteId}`);
   }
 
   return (
@@ -36,14 +56,15 @@ export default function HomePage() {
             </Link>
           </div>
           <div className="clip-path-right-angle absolute w-[calc(100%-0rem)] h-[calc(100%-0rem)] bg-emerald-50 rounded-lg">
-            <Link href="/note" className="block h-full w-full">
-              <Button variant="ghost" className="w-full h-full flex items-end justify-end p-4 hover:bg-emerald-200">
-                <span className="text-lg font-semibold text-gray-600 pr-6">Add new note</span>
-              </Button>
-            </Link>
+            <Button 
+              variant="ghost" 
+              className="w-full h-full flex items-end justify-end p-4 hover:bg-emerald-200"
+              onClick={handleCreateNote}
+            >
+              <span className="text-lg font-semibold text-gray-600 pr-6">Add new note</span>
+            </Button>
           </div>
         </div>
-
 
         {[
           { text: 'Devotions', href: '/devotions' },
