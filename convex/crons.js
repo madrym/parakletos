@@ -3,9 +3,9 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
-crons.hourly(
+crons.daily(
   "Delete empty notes",
-  { minuteUTC: 0 },
+  { hourUTC: 14, minuteUTC: 0 },
   internal.cleanupNotes.deleteEmptyNotes
 );
 
