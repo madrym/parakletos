@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
 import { useQuery } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import { Button } from "@/components/ui/button"
@@ -15,7 +14,6 @@ import { Label } from "@/components/ui/label"
 
 export default function MyNotesPage() {
   const { user } = useUser()
-  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const convexUser = useQuery(api.users.getUser, { tokenIdentifier: user?.id ?? '' })
@@ -120,13 +118,6 @@ export default function MyNotesPage() {
       {filteredNotes?.length === 0 && (
         <p className="text-center text-gray-600 mt-8">No notes found.</p>
       )}
-
-      <Button 
-        className="fixed top-5 left-5 bg-emerald-600 hover:bg-emerald-700 text-white"
-        onClick={() => router.push('/home')}
-      >
-        Back to Home
-      </Button>
     </div>
   )
 }

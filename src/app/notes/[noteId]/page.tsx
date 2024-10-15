@@ -15,10 +15,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { PlusCircle, X, Lightbulb, Tag } from 'lucide-react'
 import { Badge } from "@/components/ui/badge"
-import { useRouter } from 'next/navigation'
 
 export default function NotePage({ params }: { params: { noteId: string } }) {
-  const router = useRouter()
   const noteId = params.noteId as Id<"notes">
 
   // Queries
@@ -201,14 +199,8 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
   const organisedAnnotations = organiseAnnotations();
 
   return (
-    <div className="min-h-screen bg-emerald-50 p-4 relative">
+    <div className="min-h-screen bg-emerald-50 p-4 relative z-0">
       <Toaster position="top-right" />
-      <Button 
-        className="fixed top-5 left-5 bg-emerald-600 hover:bg-emerald-700 text-white"
-        onClick={() => router.push('/my-notes')}
-      >
-        Back to Notes
-      </Button>
       <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden mb-4">
         <div className="p-4 bg-emerald-100">
           <div className="flex items-center justify-between mb-2">
