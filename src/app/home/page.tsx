@@ -4,7 +4,6 @@ import React from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import Link from 'next/link'
 import { useMutation, useQuery } from "convex/react"
 import { api } from "../../../convex/_generated/api"
@@ -15,10 +14,6 @@ export default function HomePage() {
   const router = useRouter()
   const createNote = useMutation(api.notes.createNote)
   const convexUser = useQuery(api.users.getUser, { tokenIdentifier: user?.id ?? '' })
-  const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    router.push('/search')
-  }
 
   const handleCreateNote = async () => {
     if (!convexUser) {
@@ -47,10 +42,6 @@ export default function HomePage() {
       <h1 className="text-4xl font-bold mb-6 text-emerald-700">
         Hi {user?.firstName || 'there'}
       </h1>
-
-      <form onSubmit={handleSearch} className="mb-6">
-        <Input type="text" placeholder="Search notes" className="w-full bg-gray-100 border-none" />
-      </form>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2 h-48 bg-white rounded-lg overflow-hidden relative">

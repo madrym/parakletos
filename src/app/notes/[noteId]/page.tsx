@@ -11,11 +11,14 @@ import { toast, Toaster } from 'react-hot-toast'
 import { initialiseDB, getVersesFromDB } from '@/utils/initDB';
 import nivData from '@/data/NIV.json';
 import { NIVData, BibleVerse } from '@/app/types';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Lightbulb, X } from 'lucide-react'
+import { PlusCircle, X, Lightbulb, Tag } from 'lucide-react'
+import { Badge } from "@/components/ui/badge"
+import { useRouter } from 'next/navigation'
 
 export default function NotePage({ params }: { params: { noteId: string } }) {
+  const router = useRouter()
   const noteId = params.noteId as Id<"notes">
 
   // Queries
@@ -43,6 +46,11 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
   const toolbarRef = useRef<HTMLDivElement>(null)
   const [activeAnnotation, setActiveAnnotation] = useState<string | null>(null)
 
+  // Add these new state variables
+  const [topics, setTopics] = useState<string[]>([])
+  const [newTopic, setNewTopic] = useState("")
+  const [isTopicsDialogOpen, setIsTopicsDialogOpen] = useState(false)
+
   useEffect(() => {
     const now = new Date();
     setCreatedAt(now.toLocaleString());
@@ -56,6 +64,7 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
     if (note) {
       setTitle(note.title)
       setCreatedAt(new Date(note._creationTime).toLocaleString())
+      setTopics(note.topics || [])
     }
   }, [note])
 
@@ -172,42 +181,113 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
     }, {} as Record<string, typeof annotations>);
   };
 
+  // Add these new functions
+  const handleAddTopic = () => {
+    if (newTopic.trim() && !topics.includes(newTopic.trim())) {
+      setTopics([...topics, newTopic.trim()])
+      setNewTopic("")
+    }
+  }
+
+  const handleRemoveTopic = (topicToRemove: string) => {
+    setTopics(topics.filter(topic => topic !== topicToRemove))
+  }
+
+  const handleSaveTopics = () => {
+    updateNote({ noteId, topics })
+    toast.success("Topics updated successfully")
+  }
+
   const organisedAnnotations = organiseAnnotations();
 
   return (
     <div className="min-h-screen bg-emerald-50 p-4 relative">
       <Toaster position="top-right" />
+      <Button 
+        className="fixed top-5 left-5 bg-emerald-600 hover:bg-emerald-700 text-white"
+        onClick={() => router.push('/my-notes')}
+      >
+        Back to Notes
+      </Button>
       <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden mb-4">
         <div className="p-4 bg-emerald-100">
-          <div className="relative w-full mb-2">
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  updateNote({ noteId, title: title });
-                  e.currentTarget.blur();
-                }
-              }}
-              onFocus={() => setIsEditingTitle(true)}
-              onBlur={() => {
-                updateNote({ noteId, title: title });
-                setIsEditingTitle(false);
-              }}
-              placeholder="Note Title"
-              className="text-2xl font-bold bg-transparent border-none w-full pr-20"
-            />
-            {isEditingTitle && (
-              <Button
-                onClick={() => {
-                  updateNote({ noteId, title: title });
-                  (document.activeElement as HTMLElement)?.blur();
+          <div className="flex items-center justify-between mb-2">
+            <div className="relative w-full mr-2">
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    updateNote({ noteId, title: title });
+                    e.currentTarget.blur();
+                  }
                 }}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2"
-              >
-                Update
-              </Button>
-            )}
+                onFocus={() => setIsEditingTitle(true)}
+                onBlur={() => {
+                  updateNote({ noteId, title: title });
+                  setIsEditingTitle(false);
+                }}
+                placeholder="Note Title"
+                className="text-2xl font-bold bg-transparent border-none w-full pr-20"
+              />
+              {isEditingTitle && (
+                <Button
+                  onClick={() => {
+                    updateNote({ noteId, title: title });
+                    (document.activeElement as HTMLElement)?.blur();
+                  }}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                >
+                  Update
+                </Button>
+              )}
+            </div>
+            <Dialog open={isTopicsDialogOpen} onOpenChange={setIsTopicsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Tag className="h-4 w-4 mr-2" />
+                  Topics
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Manage Topics</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {topics.map(topic => (
+                    <Badge key={topic} variant="secondary" className="px-2 py-1">
+                      {topic}
+                      <button onClick={() => handleRemoveTopic(topic)} className="ml-2">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex items-center">
+                  <Input
+                    value={newTopic}
+                    onChange={(e) => setNewTopic(e.target.value)}
+                    placeholder="Add a topic"
+                    className="mr-2"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleAddTopic()
+                      }
+                    }}
+                  />
+                  <Button onClick={handleAddTopic} size="sm">
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Add
+                  </Button>
+                </div>
+                <Button onClick={() => {
+                  handleSaveTopics();
+                  setIsTopicsDialogOpen(false);
+                }} className="mt-2">
+                  Save Topics
+                </Button>
+              </DialogContent>
+            </Dialog>
           </div>
           <p className="text-sm text-gray-600">Created: {createdAt}</p>
         </div>
@@ -288,7 +368,7 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
             </Collapsible>
           ))}
         </div>
-
+        
         {selectedVerses.length > 0 && (
           <div
             ref={toolbarRef}
