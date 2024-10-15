@@ -8,7 +8,6 @@ import { api } from "../../../convex/_generated/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from 'next/link'
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
 import { Id } from '../../../convex/_generated/dataModel'
 
 export default function MyNotesPage() {

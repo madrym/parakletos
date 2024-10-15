@@ -9,7 +9,6 @@ import Link from 'next/link'
 import { useMutation, useQuery } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import { toast } from "react-hot-toast"
-import { Id } from "../../../convex/_generated/dataModel";
 
 export default function HomePage() {
   const { user } = useUser()
@@ -24,16 +23,23 @@ export default function HomePage() {
   const handleCreateNote = async () => {
     if (!convexUser) {
       console.error("User not found in Convex");
+      toast.error("Unable to create note. Please try again later.");
       return;
     }
 
-    const newNoteId = await createNote({
-      userId: convexUser._id,
-      title: "New Note",
-      topics: [],
-    });
-    
-    router.push(`/notes/${newNoteId}`);
+    try {
+      const newNoteId = await createNote({
+        userId: convexUser._id,
+        title: "New Note",
+        topics: [],
+      });
+      
+      toast.success("New note created successfully!");
+      router.push(`/notes/${newNoteId}`);
+    } catch (error) {
+      console.error("Error creating note:", error);
+      toast.error("Failed to create note. Please try again.");
+    }
   }
 
   return (

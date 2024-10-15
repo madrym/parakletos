@@ -73,14 +73,6 @@ function Content() {
   const { user } = useUser();
   const userQuery = useQuery(api.users.getUser, { tokenIdentifier: user?.id ?? '' });
 
-  useEffect(() => {
-    if (userQuery === null) {
-      handleUserCreation();
-    } else if (user) {
-      router.push("/home");
-    }
-  }, [user, router]);
-
   const handleUserCreation = async () => {
     try {
       await createUser({ tokenIdentifier: user?.id ?? '' });
@@ -90,6 +82,14 @@ function Content() {
       toast.error("Error creating user and logging in");
     }
   };
+
+  useEffect(() => {
+    if (userQuery === null) {
+      handleUserCreation();
+    } else if (user) {
+      router.push("/home");
+    }
+  }, [user, router, userQuery, handleUserCreation]);
 
   return <div>Loading...</div>;
 }

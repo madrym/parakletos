@@ -8,7 +8,7 @@ import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
 import { Id } from "../../../../convex/_generated/dataModel"
 import { toast, Toaster } from 'react-hot-toast'
-import { initialiseDB, getVerseFromDB, getVersesFromDB } from '@/utils/initDB';
+import { initialiseDB, getVersesFromDB } from '@/utils/initDB';
 import nivData from '@/data/NIV.json';
 import { NIVData, BibleVerse } from '@/app/types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -55,6 +55,7 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
   useEffect(() => {
     if (note) {
       setTitle(note.title)
+      setCreatedAt(new Date(note._creationTime).toLocaleString())
     }
   }, [note])
 
@@ -177,39 +178,38 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
     <div className="min-h-screen bg-emerald-50 p-4 relative">
       <Toaster position="top-right" />
       <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden mb-4">
-        <div className="p-4 bg-emerald-100 flex items-center">
-          <div className="relative w-full">
-            <div className="relative w-full">
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    updateNote({ noteId, title: title });
-                    e.currentTarget.blur(); // Remove focus from the input
-                  }
-                }}
-                onFocus={() => setIsEditingTitle(true)}
-                onBlur={() => {
+        <div className="p-4 bg-emerald-100">
+          <div className="relative w-full mb-2">
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
                   updateNote({ noteId, title: title });
-                  setIsEditingTitle(false);
+                  e.currentTarget.blur();
+                }
+              }}
+              onFocus={() => setIsEditingTitle(true)}
+              onBlur={() => {
+                updateNote({ noteId, title: title });
+                setIsEditingTitle(false);
+              }}
+              placeholder="Note Title"
+              className="text-2xl font-bold bg-transparent border-none w-full pr-20"
+            />
+            {isEditingTitle && (
+              <Button
+                onClick={() => {
+                  updateNote({ noteId, title: title });
+                  (document.activeElement as HTMLElement)?.blur();
                 }}
-                placeholder="Note Title"
-                className="text-2xl font-bold bg-transparent border-none w-full pr-20"
-              />
-              {isEditingTitle && (
-                <Button
-                  onClick={() => {
-                    updateNote({ noteId, title: title });
-                    (document.activeElement as HTMLElement)?.blur();
-                  }}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                >
-                  Update
-                </Button>
-              )}
-            </div>
+                className="absolute right-2 top-1/2 transform -translate-y-1/2"
+              >
+                Update
+              </Button>
+            )}
           </div>
+          <p className="text-sm text-gray-600">Created: {createdAt}</p>
         </div>
         <div className="p-4">
           <Button onClick={() => setIsDialogOpen(true)}>Add Bible Section</Button>
