@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { UserButton } from "@clerk/nextjs"
+import { UserButton, SignOutButton } from "@clerk/nextjs"
 import { Menu, X, Home, Book, BookOpen, BookImage, Search } from 'lucide-react'
 
 const NavBar = () => {
@@ -31,7 +31,13 @@ const NavBar = () => {
             Parakletos
           </Link>
         </div>
-        <UserButton appearance={{ elements: { avatarBox: { width: 40, height: 40 } } }} />
+        <SignOutButton>
+          <UserButton 
+            appearance={{
+              elements: { avatarBox: { width: 40, height: 40 } }
+            }}
+          />
+        </SignOutButton>
       </div>
 
       {/* Sidebar */}
@@ -60,4 +66,3 @@ const NavBar = () => {
 }
 
 export default NavBar
-

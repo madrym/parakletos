@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { SignInButton, UserButton } from "@clerk/clerk-react";
+import { SignInButton } from "@clerk/clerk-react";
 import { Authenticated, Unauthenticated, useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { toast } from "react-hot-toast";
@@ -14,7 +14,7 @@ export default function Component() {
       <h1 className="text-6xl font-bold mb-8 text-emerald-800">
         <AnimatedTitle />
       </h1>
-      <p className="text-xl text-emerald-700 mb-8 max-w-md">
+      <p className="text-xl text-emerald-700 mb-8 max-w-md text-center">
         Your personal helper for sermon and bible study note-taking
       </p>
       <Unauthenticated>
@@ -25,7 +25,6 @@ export default function Component() {
         </SignInButton>
       </Unauthenticated>
       <Authenticated>
-        <UserButton afterSignOutUrl="/" />
         <Content />
       </Authenticated>
     </main>
@@ -93,3 +92,4 @@ function Content() {
 
   return <div>Loading...</div>;
 }
+

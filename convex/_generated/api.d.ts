@@ -15,6 +15,8 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as cleanupNotes from "../cleanupNotes.js";
+import type * as crons from "../crons.js";
 import type * as noteFreeText from "../noteFreeText.js";
 import type * as noteSectionAnnotations from "../noteSectionAnnotations.js";
 import type * as noteSections from "../noteSections.js";
@@ -31,6 +33,8 @@ import type * as verseTags from "../verseTags.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  cleanupNotes: typeof cleanupNotes;
+  crons: typeof crons;
   noteFreeText: typeof noteFreeText;
   noteSectionAnnotations: typeof noteSectionAnnotations;
   noteSections: typeof noteSections;
