@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import EditorJS, { OutputData } from '@editorjs/editorjs';
+import EditorJS, { OutputData, LogLevels } from '@editorjs/editorjs';
 import Header from '@editorjs/header';
 import List from '@editorjs/list';
 import Paragraph from '@editorjs/paragraph';
@@ -41,13 +41,12 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
           content: contentString,
         });
       } else {
-        const newNoteFreeTextId = await createNoteFreeText({
-          userId,
+        const result = await createNoteFreeText({
           noteId,
+          userId,
           content: contentString,
         });
-        noteFreeTextIdRef.current = newNoteFreeTextId;
-        localStorage.setItem(`noteFreeTextId_${noteId}`, newNoteFreeTextId);
+        noteFreeTextIdRef.current = result as Id<"noteFreeText">;
       }
       setLastSavedContent(contentString);
       setIsSaved(true);
@@ -57,7 +56,7 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
   }, [updateNoteFreeText, createNoteFreeText, userId, noteId, lastSavedContent]);
 
   const debouncedSave = useCallback(
-    debounce((content: OutputData) => saveEditorContent(content), 2000),
+    (content: OutputData) => debounce(() => saveEditorContent(content), 2000),
     [saveEditorContent]
   );
 
@@ -144,7 +143,7 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
         if (editorRef.current) {
           const content = await editorRef.current.save();
           setIsSaved(false);
-          debouncedSave(content);
+          debouncedSave(content)();
         }
       },
       onReady: () => {
@@ -153,6 +152,7 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
       },
       autofocus: true,
       placeholder: 'Start typing your note here...',
+      logLevel: 'ERROR' as LogLevels,
     });
     editorRef.current = editor;
   }, [noteFreeText, editorId, debouncedSave]);
