@@ -10,7 +10,7 @@
     "generate:types": "npx openapi-typescript openapi/api.bible.openapi3.json -o ./src/lib/types.ts"
   },
   "dependencies": {
-    "@clerk/nextjs": "^5.6.0",
+    "@clerk/nextjs": "^5.7.5",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-dialog": "^1.1.1",
     "@radix-ui/react-popover": "^1.1.1",
