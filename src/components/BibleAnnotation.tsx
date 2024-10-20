@@ -10,6 +10,14 @@ import { Lightbulb, X } from 'lucide-react'
 import { BibleVerse } from '@/app/types'
 import { Id } from "../../convex/_generated/dataModel"
 
+interface Annotation {
+  _id: Id<"noteSectionAnnotations">
+  noteId: Id<"notes">
+  sectionId: Id<"noteSections">
+  content: string
+  verses: string[]
+}
+
 interface BibleAnnotationProps {
   noteId: Id<"notes">
   section: {
@@ -17,7 +25,7 @@ interface BibleAnnotationProps {
     bibleReference: string
     content: BibleVerse[]
   }
-  annotations: any[]
+  annotations: Annotation[]
 }
 
 export function BibleAnnotation({ noteId, section, annotations }: BibleAnnotationProps) {
@@ -117,7 +125,7 @@ export function BibleAnnotation({ noteId, section, annotations }: BibleAnnotatio
               verseContent.verse === parseInt(verse)) {
             const key = `${section._id}-${verseRef}`;
             if (!acc[key]) acc[key] = [];
-            if (!acc[key].some((existingAnnotation: any) => existingAnnotation._id === annotation._id)) {
+            if (!acc[key].some((existingAnnotation: Annotation) => existingAnnotation._id === annotation._id)) {
               acc[key].push(annotation);
             }
           }
@@ -201,7 +209,7 @@ export function BibleAnnotation({ noteId, section, annotations }: BibleAnnotatio
                   >
                     <X className="h-4 w-4" />
                   </button>
-                  {verseAnnotations.map((annotation: any, annotationIndex: number) => (
+                  {verseAnnotations.map((annotation: Annotation, annotationIndex: number) => (
                     <p key={annotationIndex} className="text-sm mt-2">{annotation.content}</p>
                   ))}
                 </div>

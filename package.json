@@ -27,14 +27,6 @@
     "@radix-ui/react-tabs": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.1.2",
     "@react-spring/web": "^9.7.4",
-    "@tiptap/extension-bullet-list": "^2.6.6",
-    "@tiptap/extension-link": "^2.7.2",
-    "@tiptap/extension-list-item": "^2.6.6",
-    "@tiptap/extension-ordered-list": "^2.7.2",
-    "@tiptap/extension-placeholder": "^2.6.6",
-    "@tiptap/extension-underline": "^2.7.2",
-    "@tiptap/react": "^2.6.6",
-    "@tiptap/starter-kit": "^2.6.6",
     "@use-gesture/react": "^10.3.1",
     "axios": "^1.7.7",
     "class-variance-authority": "^0.7.0",
@@ -68,5 +60,10 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
-  }
+  },
+  "description": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

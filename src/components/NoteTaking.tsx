@@ -1,8 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import EditorJS, { OutputData, BlockToolConstructable } from '@editorjs/editorjs';
-import { ParagraphConfig } from '@editorjs/paragraph';
+import EditorJS, { OutputData } from '@editorjs/editorjs';
 import Header from '@editorjs/header';
 import List from '@editorjs/list';
 import Paragraph from '@editorjs/paragraph';
@@ -23,7 +22,9 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
   const [isToolbarOpen, setIsToolbarOpen] = useState(false);
   const [isEditorReady, setIsEditorReady] = useState(false);
   const [lastSavedContent, setLastSavedContent] = useState<string>('');
+  const noteFreeTextIdRef = useRef<Id<"noteFreeText"> | null>(null);
   const editorId = `editorjs-${noteId}`;
+  const [isSaved, setIsSaved] = useState(false);
 
   const createNoteFreeText = useMutation(api.noteFreeText.createNoteFreeText);
   const updateNoteFreeText = useMutation(api.noteFreeText.updateNoteFreeText);
@@ -32,25 +33,28 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
   const saveEditorContent = useCallback(async (content: OutputData) => {
     const contentString = JSON.stringify(content);
     if (contentString === lastSavedContent) return;
-
+    
     try {
-      if (noteFreeText && noteFreeText.length > 0) {
+      if (noteFreeTextIdRef.current) {
         await updateNoteFreeText({
-          noteFreeTextId: noteFreeText[0]._id,
+          noteFreeTextId: noteFreeTextIdRef.current,
           content: contentString,
         });
       } else {
-        await createNoteFreeText({
+        const newNoteFreeTextId = await createNoteFreeText({
           userId,
           noteId,
           content: contentString,
         });
+        noteFreeTextIdRef.current = newNoteFreeTextId;
+        localStorage.setItem(`noteFreeTextId_${noteId}`, newNoteFreeTextId);
       }
       setLastSavedContent(contentString);
+      setIsSaved(true);
     } catch (error) {
       console.error('Error saving editor content:', error);
     }
-  }, [noteFreeText, updateNoteFreeText, createNoteFreeText, userId, noteId, lastSavedContent]);
+  }, [updateNoteFreeText, createNoteFreeText, userId, noteId, lastSavedContent]);
 
   const debouncedSave = useCallback(
     debounce((content: OutputData) => saveEditorContent(content), 2000),
@@ -132,25 +136,20 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
       tools: {
         header: Header,
         list: List,
-        paragraph: {
-          class: Paragraph as unknown as BlockToolConstructable,
-          inlineToolbar: true,
-          config: {
-            placeholder: 'Type here...',
-            preserveBlank: true
-          } as ParagraphConfig,
-        },
+        paragraph: Paragraph,
         quote: Quote,
       },
       data: initialData,
       onChange: async () => {
         if (editorRef.current) {
           const content = await editorRef.current.save();
+          setIsSaved(false);
           debouncedSave(content);
         }
       },
       onReady: () => {
         setIsEditorReady(true);
+        console.log('Editor is ready');
       },
       autofocus: true,
       placeholder: 'Start typing your note here...',
@@ -159,9 +158,31 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
   }, [noteFreeText, editorId, debouncedSave]);
 
   useEffect(() => {
+    const storedId = localStorage.getItem(`noteFreeTextId_${noteId}`);
+    if (storedId) {
+      noteFreeTextIdRef.current = storedId as Id<"noteFreeText">;
+    }
+  }, [noteId]);
+
+  useEffect(() => {
+    if (noteFreeText && noteFreeText.length > 0 && !noteFreeTextIdRef.current) {
+      noteFreeTextIdRef.current = noteFreeText[0]._id;
+      localStorage.setItem(`noteFreeTextId_${noteId}`, noteFreeText[0]._id);
+    }
+  }, [noteFreeText, noteId]);
+
+  useEffect(() => {
     if (noteFreeText !== undefined) {
       initEditor();
     }
+//     return () => {
+//       if (editorRef.current) {
+//         editorRef.current.isReady.then(() => {
+//           editorRef.current?.destroy();
+//           editorRef.current = null;
+//         });
+//       }
+//     };
   }, [initEditor, noteFreeText]);
 
   const handleToolSelect = (tool: string) => {
@@ -198,6 +219,11 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
       />
       {isEditorReady && renderToolbar()}
       {!isEditorReady && <div>Loading editor...</div>}
+      {isSaved && (
+        <div className="absolute top-2 right-2 text-sm text-green-700 font-semibold">
+          Auto-saved
+        </div>
+      )}
     </div>
   );
 };
