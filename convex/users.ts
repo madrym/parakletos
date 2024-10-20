@@ -22,7 +22,6 @@ export const createUser = mutation({
   args: { tokenIdentifier: v.string() },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    console.log("identity", identity)
     if (!identity) {
       throw new Error("Called createUser without authentication present");
     }

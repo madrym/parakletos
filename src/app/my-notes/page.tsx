@@ -18,8 +18,6 @@ export default function MyNotesPage() {
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const convexUser = useQuery(api.users.getUser, { tokenIdentifier: user?.id ?? '' })
   const notesWithSections = useQuery(api.notes.getNotesWithSections, { userId: convexUser?._id as Id<"users"> })
-
-  // Assuming you have a way to get all unique topics
   const allTopics = Array.from(new Set(notesWithSections?.flatMap(note => note.topics) || []))
 
   const filteredNotes = notesWithSections

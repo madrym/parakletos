@@ -62,9 +62,20 @@ export const updateNoteSection = mutation({
 });
 
 export const deleteNoteSection = mutation({
-    args: { noteSectionId: v.id("noteSections") },
+    args: { noteId: v.id("notes"), noteSectionId: v.id("noteSections") },
     handler: async (ctx, args) => {
+        // Delete the note section
         await ctx.db.delete(args.noteSectionId);
+
+        // Delete associated note annotations
+        const annotationsToDelete = await ctx.db
+            .query("noteSectionAnnotations")
+            .withIndex("by_note_and_section", (q) => q.eq("noteId", args.noteId).eq("sectionId", args.noteSectionId))
+            .collect();
+
+        for (const annotation of annotationsToDelete) {
+            await ctx.db.delete(annotation._id);
+        }
     },
 });
 
