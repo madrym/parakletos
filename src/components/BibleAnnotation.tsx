@@ -95,24 +95,33 @@ export function BibleAnnotation({ noteId, section, annotations }: BibleAnnotatio
   const organiseAnnotations = () => {
     const sortedAnnotations = annotations.sort((a, b) => {
       const compareVerses = (verseA: string, verseB: string) => {
-        const [aBook, aChapter, aVerse] = verseA.split(/\s|:/);
-        const [bBook, bChapter, bVerse] = verseB.split(/\s|:/);
-        if (aBook !== bBook) return aBook.localeCompare(bBook);
-        if (aChapter !== bChapter) return parseInt(aChapter) - parseInt(bChapter);
-        return parseInt(aVerse) - parseInt(bVerse);
+        const parseVerseRef = (ref: string) => {
+          const match = ref.match(/^(.+?)\s+(\d+):(\d+)$/);
+          if (!match) return { book: '', chapter: 0, verse: 0 };
+          return {
+            book: match[1].trim(),
+            chapter: parseInt(match[2]),
+            verse: parseInt(match[3])
+          };
+        };
+
+        const verseAInfo = parseVerseRef(verseA);
+        const verseBInfo = parseVerseRef(verseB);
+
+        if (verseAInfo.book !== verseBInfo.book) return verseAInfo.book.localeCompare(verseBInfo.book);
+        if (verseAInfo.chapter !== verseBInfo.chapter) return verseAInfo.chapter - verseBInfo.chapter;
+        return verseAInfo.verse - verseBInfo.verse;
       };
 
-      // Sort verses within each annotation
       a.verses.sort(compareVerses);
       b.verses.sort(compareVerses);
 
-      // Compare the first verse of each annotation
       return compareVerses(a.verses[0], b.verses[0]);
     });
 
     return sortedAnnotations.reduce((acc, annotation) => {
       annotation.verses.forEach((verseRef: string) => {
-        const match = verseRef.match(/^(\d*\s*\w+)\s*(\d+):(\d+)$/);
+        const match = verseRef.match(/^(.+?)\s+(\d+):(\d+)$/);
         if (!match) {
           console.error("Invalid verse reference format:", verseRef);
           return;
@@ -154,13 +163,16 @@ export function BibleAnnotation({ noteId, section, annotations }: BibleAnnotatio
         <h3 className="text-lg font-semibold">Bible Reference: {section.bibleReference}</h3>
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogTrigger asChild>
-            <button
-              onClick={(e) => e.stopPropagation()}
-              className="p-1 hover:bg-red-100 rounded-full group"
+            <div
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsDeleteDialogOpen(true)
+              }}
+              className="p-1 hover:bg-red-100 rounded-full group cursor-pointer"
               title="Delete Section"
             >
               <X className="h-4 w-4 text-gray-500 group-hover:text-red-500" />
-            </button>
+            </div>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>

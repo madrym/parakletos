@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import EditorJS, { OutputData, LogLevels } from '@editorjs/editorjs';
 import Header from '@editorjs/header';
 import List from '@editorjs/list';
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Id } from '../../convex/_generated/dataModel';
+import BibleVerseTool from './editor/BibleVerseTool';
 
 interface NoteTakingProps {
   noteId: Id<"notes">;
@@ -30,33 +31,48 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
   const updateNoteFreeText = useMutation(api.noteFreeText.updateNoteFreeText);
   const noteFreeText = useQuery(api.noteFreeText.getNoteFreeText, { noteId });
 
-  const saveEditorContent = useCallback(async (content: OutputData) => {
-    const contentString = JSON.stringify(content);
-    if (contentString === lastSavedContent) return;
-    
-    try {
-      if (noteFreeTextIdRef.current) {
-        await updateNoteFreeText({
-          noteFreeTextId: noteFreeTextIdRef.current,
-          content: contentString,
-        });
-      } else {
-        const result = await createNoteFreeText({
-          noteId,
-          userId,
-          content: contentString,
-        });
-        noteFreeTextIdRef.current = result as Id<"noteFreeText">;
+  useEffect(() => {
+    // Initialize lastSavedContent when note data is loaded
+    if (noteFreeText && noteFreeText.length > 0) {
+      try {
+        const content = JSON.parse(noteFreeText[0].content);
+        const normalizedContent = {
+          ...content,
+          time: undefined,
+          blocks: content.blocks.map((block: any) => ({
+            ...block,
+            id: undefined
+          }))
+        };
+        setLastSavedContent(JSON.stringify(normalizedContent));
+      } catch (error) {
+        console.error('Error parsing initial content:', error);
       }
-      setLastSavedContent(contentString);
+    }
+  }, [noteFreeText]);
+
+  const saveEditorContent = useCallback(async (content: OutputData) => {
+    try {
+      if (!noteFreeTextIdRef.current) {
+        return;
+      }
+
+      await updateNoteFreeText({
+        noteFreeTextId: noteFreeTextIdRef.current,
+        content: JSON.stringify(content),
+      });
+      
       setIsSaved(true);
     } catch (error) {
-      console.error('Error saving editor content:', error);
+      console.error('Error in saveEditorContent:', error);
+      setIsSaved(false);
     }
-  }, [updateNoteFreeText, createNoteFreeText, userId, noteId, lastSavedContent]);
+  }, [updateNoteFreeText]);
 
-  const debouncedSave = useCallback(
-    (content: OutputData) => debounce(() => saveEditorContent(content), 2000),
+  const debouncedSave = useMemo(() => 
+    debounce((content: OutputData) => {
+      saveEditorContent(content);
+    }, 2000),
     [saveEditorContent]
   );
 
@@ -106,6 +122,11 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
             block.data.caption = '';
           }
           break;
+        case 'bibleVerse':
+          if (!block.data.reference || !block.data.formattedReference || !Array.isArray(block.data.verses)) {
+            return null;
+          }
+          break;
         default:
           return null;
       }
@@ -116,46 +137,58 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
     return data;
   };
 
-  const initEditor = useCallback(() => {
-    if (editorRef.current) return;
-
-    let initialData: OutputData = { blocks: [] };
-    if (noteFreeText && noteFreeText.length > 0) {
-      try {
-        const parsedData = JSON.parse(noteFreeText[0].content);
-        initialData = validateAndFixData(parsedData);
-        setLastSavedContent(JSON.stringify(initialData));
-      } catch (error) {
-        console.error('Error parsing initial data:', error);
+  const handleToolSelect = async (tool: string) => {
+    setIsToolbarOpen(false);
+    if (editorRef.current) {
+      if (tool === 'bibleVerse') {
+        // Let the tool handle the prompt and verse fetching
+        await editorRef.current.blocks.insert('bibleVerse');
+      } else {
+        editorRef.current.blocks.insert(tool);
       }
     }
+  };
 
-    const editor = new EditorJS({
-      holder: editorId,
-      tools: {
-        header: Header,
-        list: List,
-        paragraph: Paragraph,
-        quote: Quote,
-      },
-      data: initialData,
-      onChange: async () => {
-        if (editorRef.current) {
-          const content = await editorRef.current.save();
-          setIsSaved(false);
-          debouncedSave(content)();
-        }
-      },
-      onReady: () => {
-        setIsEditorReady(true);
-        console.log('Editor is ready');
-      },
-      autofocus: true,
-      placeholder: 'Start typing your note here...',
-      logLevel: 'ERROR' as LogLevels,
-    });
-    editorRef.current = editor;
-  }, [noteFreeText, editorId, debouncedSave]);
+  useEffect(() => {
+    let currentEditor: EditorJS | null = null;
+
+    if (noteFreeText !== undefined && !editorRef.current) {
+      currentEditor = new EditorJS({
+        holder: editorId,
+        tools: {
+          paragraph: Paragraph,
+          header: Header,
+          list: List,
+          quote: Quote,
+          bibleVerse: BibleVerseTool
+        },
+        data: noteFreeText && noteFreeText.length > 0 
+          ? validateAndFixData(JSON.parse(noteFreeText[0].content))
+          : { blocks: [] },
+        onChange: async () => {
+          if (currentEditor) {
+            const outputData = await currentEditor.save();
+            setIsSaved(false);
+            debouncedSave(outputData);
+          }
+        },
+        onReady: () => {
+          setIsEditorReady(true);
+        },
+        autofocus: true,
+        placeholder: 'Start typing your note here...',
+        logLevel: 'ERROR' as LogLevels,
+      });
+
+      editorRef.current = currentEditor;
+    }
+
+    return () => {
+      if (currentEditor && editorRef.current === currentEditor) {
+        // Cleanup only on unmount
+      }
+    };
+  }, [noteFreeText, editorId]);
 
   useEffect(() => {
     const storedId = localStorage.getItem(`noteFreeTextId_${noteId}`);
@@ -171,27 +204,6 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
     }
   }, [noteFreeText, noteId]);
 
-  useEffect(() => {
-    if (noteFreeText !== undefined) {
-      initEditor();
-    }
-//     return () => {
-//       if (editorRef.current) {
-//         editorRef.current.isReady.then(() => {
-//           editorRef.current?.destroy();
-//           editorRef.current = null;
-//         });
-//       }
-//     };
-  }, [initEditor, noteFreeText]);
-
-  const handleToolSelect = (tool: string) => {
-    setIsToolbarOpen(false);
-    if (editorRef.current) {
-      editorRef.current.blocks.insert(tool);
-    }
-  };
-
   const renderToolbar = () => (
     <Dialog open={isToolbarOpen} onOpenChange={setIsToolbarOpen}>
       <DialogTrigger asChild>
@@ -206,6 +218,7 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
           <Button onClick={() => handleToolSelect('paragraph')}>Paragraph</Button>
           <Button onClick={() => handleToolSelect('list')}>List</Button>
           <Button onClick={() => handleToolSelect('quote')}>Quote</Button>
+          <Button onClick={() => handleToolSelect('bibleVerse')}>Bible Verse</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -237,6 +250,8 @@ function debounce<T extends (...args: any[]) => any>(
   let timeout: NodeJS.Timeout | null = null;
   return (...args: Parameters<T>) => {
     if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
+    timeout = setTimeout(() => {
+      func.apply(null, args);
+    }, wait);
   };
 }

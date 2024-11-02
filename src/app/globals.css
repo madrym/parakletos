@@ -276,3 +276,15 @@
 .clip-path-right-angle {
   clip-path: polygon(0 0, 0 50%, 52% 50%, 52% 100%, 100% 100%, 100% 0);
 }
+
+.bible-verse-block details summary::-webkit-details-marker {
+  display: none;
+}
+
+.bible-verse-block summary {
+  list-style: none;
+}
+
+.bible-verse-block {
+  margin: 1em 0;
+}
