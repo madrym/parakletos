@@ -65,29 +65,68 @@ export default class BibleVerseTool implements BlockTool {
       container.innerHTML = '';
 
       if (this.data.verses && this.data.verses.length > 0) {
-        // Create header/toggle button
-        const header = document.createElement('button');
-        header.classList.add(
-          'w-full', 
-          'text-left', 
-          'font-semibold', 
-          'p-4', 
-          'flex', 
-          'items-center', 
+        // Create header container
+        const headerContainer = document.createElement('div');
+        headerContainer.classList.add(
+          'w-full',
+          'flex',
+          'items-center',
           'justify-between',
+          'p-4',
           'hover:bg-gray-50'
         );
+
+        // Create left side of header with reference
+        const headerLeft = document.createElement('div');
+        headerLeft.classList.add('flex', 'items-center', 'gap-2');
         
         const headerText = document.createElement('span');
+        headerText.classList.add('font-semibold');
         headerText.textContent = `📖 ${this.data.formattedReference}`;
         
         const toggleIcon = document.createElement('span');
         toggleIcon.textContent = '▼';
         toggleIcon.classList.add('text-sm', 'transition-transform', 'duration-200');
         
-        header.appendChild(headerText);
-        header.appendChild(toggleIcon);
-        container.appendChild(header);
+        headerLeft.appendChild(headerText);
+        headerLeft.appendChild(toggleIcon);
+
+        // Create edit button if not in readonly mode
+        if (!this.readOnly) {
+          const editButton = document.createElement('button');
+          editButton.classList.add(
+            'px-2',
+            'py-1',
+            'text-sm',
+            'text-gray-600',
+            'hover:bg-gray-100',
+            'rounded'
+          );
+          editButton.textContent = 'Edit';
+          editButton.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const newReference = prompt('Enter Bible reference:', this.data.reference);
+            if (newReference) {
+              try {
+                const result = await getVersesFromDB(newReference);
+                this.data = {
+                  reference: newReference,
+                  formattedReference: result.formattedReference,
+                  verses: result.verses
+                };
+                renderContent(); // Re-render the content
+              } catch (error) {
+                console.error('Error fetching Bible verses:', error);
+              }
+            }
+          });
+          headerContainer.appendChild(headerLeft);
+          headerContainer.appendChild(editButton);
+        } else {
+          headerContainer.appendChild(headerLeft);
+        }
+
+        container.appendChild(headerContainer);
 
         // Create verses container
         const versesContainer = document.createElement('div');
@@ -111,10 +150,12 @@ export default class BibleVerseTool implements BlockTool {
 
         // Add toggle functionality
         let isCollapsed = false;
-        header.addEventListener('click', () => {
-          isCollapsed = !isCollapsed;
-          versesContainer.style.display = isCollapsed ? 'none' : 'block';
-          toggleIcon.style.transform = isCollapsed ? 'rotate(-90deg)' : '';
+        headerContainer.addEventListener('click', (e) => {
+          if (e.target === headerContainer || e.target === headerLeft || e.target === toggleIcon) {
+            isCollapsed = !isCollapsed;
+            versesContainer.style.display = isCollapsed ? 'none' : 'block';
+            toggleIcon.style.transform = isCollapsed ? 'rotate(-90deg)' : '';
+          }
         });
       } else {
         const placeholder = document.createElement('div');
