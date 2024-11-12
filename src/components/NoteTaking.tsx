@@ -18,16 +18,15 @@ interface NoteTakingProps {
   userId: Id<"users">;
 }
 
-const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
+const NoteTaking: React.FC<NoteTakingProps> = ({ noteId }) => {
   const editorRef = useRef<EditorJS | null>(null);
   const [isToolbarOpen, setIsToolbarOpen] = useState(false);
   const [isEditorReady, setIsEditorReady] = useState(false);
-  const [lastSavedContent, setLastSavedContent] = useState<string>('');
+  const [, setLastSavedContent] = useState<string>('');
   const noteFreeTextIdRef = useRef<Id<"noteFreeText"> | null>(null);
   const editorId = `editorjs-${noteId}`;
   const [isSaved, setIsSaved] = useState(false);
 
-  const createNoteFreeText = useMutation(api.noteFreeText.createNoteFreeText);
   const updateNoteFreeText = useMutation(api.noteFreeText.updateNoteFreeText);
   const noteFreeText = useQuery(api.noteFreeText.getNoteFreeText, { noteId });
 
@@ -188,7 +187,7 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
         // Cleanup only on unmount
       }
     };
-  }, [noteFreeText, editorId]);
+  }, [noteFreeText, editorId, debouncedSave]);
 
   useEffect(() => {
     const storedId = localStorage.getItem(`noteFreeTextId_${noteId}`);
