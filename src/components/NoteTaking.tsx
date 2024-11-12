@@ -249,8 +249,6 @@ function debounce<T extends (...args: any[]) => any>(
   let timeout: NodeJS.Timeout | null = null;
   return (...args: Parameters<T>) => {
     if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      func.apply(null, args);
-    }, wait);
+    timeout = setTimeout(() => func(...args), wait);
   };
 }
