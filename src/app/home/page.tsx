@@ -1,234 +1,83 @@
-"use client";
+'use client'
 
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { Menu, Plus, Tag, X } from "lucide-react";
-import FileList, { File, GroupedFiles } from "@/components/FileList";
-import Link from "next/link";
-import { UserButton, useUser } from "@clerk/nextjs";
+import React from 'react'
+import { useUser } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
+import { Button } from "@/components/ui/button"
+import Link from 'next/link'
+import { useMutation, useQuery } from "convex/react"
+import { api } from "../../../convex/_generated/api"
+import { toast } from "react-hot-toast"
 
-// Mock data for recently edited files and tags
-const recentFiles: File[] = [
-  {
-    id: 1,
-    title: "Sunday Sermon Notes",
-    verse: "John 3:16",
-    date: new Date(2023, 5, 1),
-    tags: ["sermon", "love"],
-  },
-  {
-    id: 2,
-    title: "Bible Study - Ephesians",
-    verse: "Ephesians 2:8-9",
-    date: new Date(2023, 5, 15),
-    tags: ["study", "grace"],
-  },
-  {
-    id: 3,
-    title: "Prayer Journal",
-    verse: "Philippians 4:6-7",
-    date: new Date(2023, 6, 1),
-    tags: ["prayer", "anxiety"],
-  },
-  {
-    id: 4,
-    title: "Devotional Thoughts",
-    verse: "Psalm 23:1",
-    date: new Date(2023, 6, 15),
-    tags: ["devotional", "trust"],
-  },
-  {
-    id: 5,
-    title: "Church Meeting Notes",
-    verse: "Acts 2:42",
-    date: new Date(2023, 7, 1),
-    tags: ["meeting", "community"],
-  },
-];
+export default function HomePage() {
+  const { user } = useUser()
+  const router = useRouter()
+  const createNote = useMutation(api.notes.createNote)
+  const convexUser = useQuery(api.users.getUser, { tokenIdentifier: user?.id ?? '' })
 
-const allTags: string[] = [
-  "sermon",
-  "love",
-  "study",
-  "grace",
-  "prayer",
-  "anxiety",
-  "devotional",
-  "trust",
-  "meeting",
-  "community",
-];
-
-export default function Home() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [tagSearchTerm, setTagSearchTerm] = useState("");
-
-  const { user } = useUser();
-  const username = user?.firstName || "";
-
-  const filteredFiles = recentFiles.filter(
-    (file) =>
-      (file.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        file.verse.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        file.tags.some((tag) =>
-          tag.toLowerCase().includes(searchTerm.toLowerCase())
-        )) &&
-      (selectedTags.length === 0 ||
-        selectedTags.some((tag) => file.tags.includes(tag)))
-  );
-
-  const filteredTags = allTags.filter((tag) =>
-    tag.toLowerCase().includes(tagSearchTerm.toLowerCase())
-  );
-
-  const groupedFiles: GroupedFiles = filteredFiles.reduce((acc, file) => {
-    const month = file.date.toLocaleString("default", {
-      month: "long",
-      year: "numeric",
-    });
-    if (!acc[month]) {
-      acc[month] = [];
+  const handleCreateNote = async () => {
+    if (!convexUser) {
+      console.error("User not found in Convex");
+      toast.error("Unable to create note. Please try again later.");
+      return;
     }
-    acc[month].push(file);
-    return acc;
-  }, {} as GroupedFiles);
 
-  const toggleTag = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
+    try {
+      const newNoteId = await createNote({
+        userId: convexUser._id,
+        title: "New Note",
+        topics: [],
+      });
+      
+      toast.success("New note created successfully!");
+      router.push(`/notes/${newNoteId}`);
+    } catch (error) {
+      console.error("Error creating note:", error);
+      toast.error("Failed to create note. Please try again.");
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-emerald-50">
-      <header className="bg-emerald-600 text-white p-4 flex items-center justify-between">
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-white">
-              <Menu className="h-6 w-6" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-[300px] sm:w-[400px]">
-            <div className="py-4">
-              <h2 className="text-lg font-semibold mb-2">Search Notes</h2>
-              <Input
-                type="search"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="mb-4"
-              />
-              <FileList groupedFiles={groupedFiles} />
-            </div>
-          </SheetContent>
-        </Sheet>
-        <UserButton />
-      </header>
-      <main className="p-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold text-emerald-800">
-            Welcome{username ? `, ${username}` : ""}
-          </h1>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-emerald-600 border-emerald-600"
-              >
-                <Tag className="h-4 w-4 mr-2" />
-                Filter
+    <div className="container mx-auto p-4 max-w-md">
+      <h1 className="text-4xl font-bold mb-6 text-emerald-700">
+        Hi {user?.firstName || 'there'}
+      </h1>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="col-span-2 h-48 bg-white rounded-lg overflow-hidden relative">
+          <div className="absolute bottom-0 left-0 w-[calc(50%-0.5rem)] h-[calc(50%-1rem)] bg-emerald-50 rounded-lg">
+            <Link href="/my-notes" className="block w-full h-full">
+              <Button variant="ghost" className="w-full h-full text-base font-semibold text-gray-600 hover:bg-emerald-200">
+                My notes
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <div className="mb-6">
-                <Input
-                  type="search"
-                  placeholder="Search labels..."
-                  value={tagSearchTerm}
-                  onChange={(e) => setTagSearchTerm(e.target.value)}
-                  className="mb-4"
-                />
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {filteredTags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant={
-                        selectedTags.includes(tag) ? "default" : "outline"
-                      }
-                      className="cursor-pointer text-sm py-1 px-3"
-                      onClick={() => toggleTag(tag)}
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-                {selectedTags.length > 0 && (
-                  <div className="flex items-center mb-4">
-                    <span className="mr-2 text-sm text-emerald-700">
-                      Filtered by:
-                    </span>
-                    {selectedTags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="default"
-                        className="mr-1 cursor-pointer"
-                        onClick={() => toggleTag(tag)}
-                      >
-                        {tag}
-                        <X className="h-3 w-3 ml-1" />
-                      </Badge>
-                    ))}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedTags([])}
-                      className="ml-2 text-xs text-emerald-600"
-                    >
-                      Clear all
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
+            </Link>
+          </div>
+          <div className="clip-path-right-angle absolute w-[calc(100%-0rem)] h-[calc(100%-0rem)] bg-emerald-50 rounded-lg">
+            <Button 
+              variant="ghost" 
+              className="w-full h-full flex items-end justify-end p-4 hover:bg-emerald-200"
+              onClick={handleCreateNote}
+            >
+              <span className="text-lg font-semibold text-gray-600 pr-6">Add new note</span>
+            </Button>
+          </div>
         </div>
-        <h2 className="text-xl font-semibold text-emerald-700 mb-4">
-          Recently Edited
-        </h2>
-        <div className="space-y-4">
-          {filteredFiles.map((file) => (
-            <div key={file.id} className="bg-white p-4 rounded-lg shadow">
-              <h3 className="font-medium text-lg">{file.title}</h3>
-              <p className="text-emerald-600">{file.verse}</p>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {file.tags.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant={selectedTags.includes(tag) ? "default" : "outline"}
-                    className="text-xs"
-                  >
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </main>
-      <Link href="/note">
-        <Button
-          className="fixed bottom-6 right-6 rounded-full w-14 h-14 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
-          size="icon"
-        >
-          <Plus className="h-6 w-6" />
-        </Button>
-      </Link>
+
+        {[
+          { text: 'Devotions', href: '/devotions' },
+          { text: 'Bible Study', href: '/bible-study' },
+          { text: 'Sermons', href: '/sermons' },
+          { text: 'Quick Lookup', href: '/bible' }
+        ].map((item) => (
+          <div key={item.text} className="bg-emerald-50 rounded-lg h-24 hover:bg-emerald-200">
+            <Link href={item.href} className="block h-full">
+              <Button variant="ghost" className="w-full h-full text-base font-semibold text-gray-600 hover:bg-emerald-200">
+                {item.text}
+              </Button>
+            </Link>
+          </div>
+        ))}
+      </div>
     </div>
-  );
+  )
 }
