@@ -45,7 +45,7 @@
     "react-quilljs": "^2.0.4",
     "react-rnd": "^10.4.12",
     "react-spring": "^9.7.4",
-    "tailwind-merge": "^2.5.2",
+    "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^10.0.0"
   },
