@@ -12,13 +12,25 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Id } from '../../convex/_generated/dataModel';
 import BibleVerseTool from './editor/BibleVerseTool';
+import { getVersesFromDB } from '@/utils/initDB';
+import { Card } from "@/components/ui/card";
 
 interface NoteTakingProps {
   noteId: Id<"notes">;
   userId: Id<"users">;
 }
 
-const NoteTaking: React.FC<NoteTakingProps> = ({ noteId }) => {
+interface VersePreview {
+  formattedReference: string;
+  verses: {
+    book: string;
+    chapter: number;
+    verse: number;
+    text: string;
+  }[];
+}
+
+const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
   const editorRef = useRef<EditorJS | null>(null);
   const [isToolbarOpen, setIsToolbarOpen] = useState(false);
   const [isEditorReady, setIsEditorReady] = useState(false);
@@ -26,9 +38,35 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId }) => {
   const noteFreeTextIdRef = useRef<Id<"noteFreeText"> | null>(null);
   const editorId = `editorjs-${noteId}`;
   const [isSaved, setIsSaved] = useState(false);
+  const [versePreview, setVersePreview] = useState<VersePreview | null>(null);
+  const [lastTypedText, setLastTypedText] = useState<string>('');
 
+  const createNoteFreeText = useMutation(api.noteFreeText.createNoteFreeText);
   const updateNoteFreeText = useMutation(api.noteFreeText.updateNoteFreeText);
   const noteFreeText = useQuery(api.noteFreeText.getNoteFreeText, { noteId });
+
+  // Initialize noteFreeText if it doesn't exist
+  useEffect(() => {
+    const initializeNoteFreeText = async () => {
+      if (noteFreeText !== undefined && noteFreeText.length === 0) {
+        try {
+          const newNoteFreeTextId = await createNoteFreeText({
+            noteId,
+            userId,
+            content: JSON.stringify({ blocks: [] })
+          });
+          noteFreeTextIdRef.current = newNoteFreeTextId;
+        } catch (error) {
+          console.error('Error creating noteFreeText:', error);
+        }
+      } else if (noteFreeText && noteFreeText.length > 0) {
+        noteFreeTextIdRef.current = noteFreeText[0]._id;
+      }
+    };
+
+    initializeNoteFreeText();
+  }, [noteFreeText, noteId, userId, createNoteFreeText]);
+
 
   useEffect(() => {
     // Initialize lastSavedContent when note data is loaded
@@ -52,15 +90,16 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId }) => {
 
   const saveEditorContent = useCallback(async (content: OutputData) => {
     try {
+      console.log('saveEditorContent - noteFreeTextIdRef.current', noteFreeTextIdRef.current);
       if (!noteFreeTextIdRef.current) {
         return;
       }
-
+      console.log('saveEditorContent - content', content);
       await updateNoteFreeText({
         noteFreeTextId: noteFreeTextIdRef.current,
         content: JSON.stringify(content),
       });
-      
+      console.log('saveEditorContent - noteFreeTextIdRef.current', noteFreeTextIdRef.current);
       setIsSaved(true);
     } catch (error) {
       console.error('Error in saveEditorContent:', error);
@@ -70,6 +109,7 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId }) => {
 
   const debouncedSave = useMemo(() => 
     debounce((content: OutputData) => {
+      console.log('debouncedSave - content', content);
       saveEditorContent(content);
     }, 2000),
     [saveEditorContent]
@@ -148,6 +188,24 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId }) => {
     }
   };
 
+  const detectBibleReference = (text: string) => {
+    // Basic regex to match common Bible verse patterns
+    const bibleReferenceRegex = /\b(\d?\s*[a-z]+(?:\s+[a-z]+)?)\s*(\d+)(?::(\d+)(?:-(\d+))?)?\b/i;
+    const match = text.match(bibleReferenceRegex);
+    return match;
+  };
+
+  const handleVerseInsertion = async () => {
+    if (versePreview && editorRef.current) {
+      await editorRef.current.blocks.insert('bibleVerse', {
+        reference: versePreview.formattedReference,
+        formattedReference: versePreview.formattedReference,
+        verses: versePreview.verses
+      });
+      setVersePreview(null);
+    }
+  };
+
   useEffect(() => {
     let currentEditor: EditorJS | null = null;
 
@@ -169,6 +227,35 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId }) => {
             const outputData = await currentEditor.save();
             setIsSaved(false);
             debouncedSave(outputData);
+
+            const currentBlockIndex = await currentEditor.blocks.getCurrentBlockIndex();
+            const currentBlock = await currentEditor.blocks.getBlockByIndex(currentBlockIndex);
+            if (currentBlock && currentBlock.name === 'paragraph') {
+              const text = currentBlock.holder.textContent || '';
+              
+              // Only process if the text has changed significantly
+              if (Math.abs(text.length - lastTypedText.length) > 0) {
+                setLastTypedText(text);
+                const match = detectBibleReference(text);
+                
+                if (match) {
+                  try {
+                    const reference = match[0];
+                    const result = await getVersesFromDB(reference);
+                    if (result.verses.length > 0) {
+                      setVersePreview(result);
+                    } else {
+                      setVersePreview(null);
+                    }
+                  } catch (error) {
+                    console.error('Error fetching verse:', error);
+                    setVersePreview(null);
+                  }
+                } else {
+                  setVersePreview(null);
+                }
+              }
+            }
           }
         },
         onReady: () => {
@@ -187,7 +274,7 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId }) => {
         // Cleanup only on unmount
       }
     };
-  }, [noteFreeText, editorId, debouncedSave]);
+  }, [noteFreeText, editorId, debouncedSave, lastTypedText]);
 
   useEffect(() => {
     const storedId = localStorage.getItem(`noteFreeTextId_${noteId}`);
@@ -235,6 +322,35 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId }) => {
         <div className="absolute top-2 right-2 text-sm text-green-700 font-semibold">
           Auto-saved
         </div>
+      )}
+      
+      {versePreview && (
+        <Card className="fixed bottom-20 right-4 p-4 w-[calc(100%-2rem)] max-w-sm bg-white shadow-lg border rounded-lg z-50">
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between items-center">
+              <div className="font-semibold">{versePreview.formattedReference}</div>
+              <button 
+                onClick={() => setVersePreview(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="text-sm max-h-40 overflow-y-auto">
+              {versePreview.verses.map((verse, index) => (
+                <div key={index} className="mb-2">
+                  <span className="font-semibold">{verse.verse}</span> {verse.text}
+                </div>
+              ))}
+            </div>
+            <Button 
+              className="mt-2 w-full"
+              onClick={handleVerseInsertion}
+            >
+              Insert Verse
+            </Button>
+          </div>
+        </Card>
       )}
     </div>
   );

@@ -85,3 +85,24 @@ export const getNotesWithSections = query({
     return notesWithSections.filter((note) => note.sections.length > 0);
   },
 });
+
+export const getNotesWithFreeText = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const notes = await ctx.db
+      .query("notes")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    const notesWithFreeText = await Promise.all(
+      notes.map(async (note) => {
+        const freeText = await ctx.db
+          .query("noteFreeText")
+          .withIndex("by_note", (q) => q.eq("noteId", note._id))
+          .collect();
+        return { ...note, freeText };
+      })
+    );
+    return notesWithFreeText.filter((note) => note.freeText.length > 0);
+  },
+});
