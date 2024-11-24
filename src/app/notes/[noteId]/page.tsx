@@ -80,7 +80,7 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
 
       await createSection({
         noteId,
-        bibleReference: bibleReferenceInput,
+        bibleReference: verses.formattedReference,
         content: content
       });
 

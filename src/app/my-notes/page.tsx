@@ -18,19 +18,41 @@ export default function MyNotesPage() {
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const convexUser = useQuery(api.users.getUser, { tokenIdentifier: user?.id ?? '' })
   const notesWithSections = useQuery(api.notes.getNotesWithSections, { userId: convexUser?._id as Id<"users"> })
+  const notesWithFreeText = useQuery(api.notes.getNotesWithFreeText, { userId: convexUser?._id as Id<"users"> })
   const allTopics = Array.from(new Set(notesWithSections?.flatMap(note => note.topics) || []))
 
-  const filteredNotes = notesWithSections
-    ?.filter(note => 
-      (note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      note.sections.some(section => 
-        section.bibleReference.toLowerCase().includes(searchTerm.toLowerCase())
-      ) ||
-      note.topics.some(topic => 
-        topic.toLowerCase().includes(searchTerm.toLowerCase())
-      )) &&
-      (selectedTopics.length === 0 || selectedTopics.some(topic => note.topics.includes(topic)))
-    )
+  const allNotes = [
+    ...(notesWithSections?.map(note => ({
+      ...note,
+      freeText: notesWithFreeText?.find(ft => ft._id === note._id)?.freeText || [],
+    })) ?? []),
+    ...(notesWithFreeText?.filter(freeTextNote => 
+      !notesWithSections?.some(sectionNote => sectionNote._id === freeTextNote._id)
+    ).map(note => ({
+      ...note,
+      sections: []
+    })) ?? [])
+  ]
+
+  const filteredNotes = allNotes
+    .filter(note => {
+      const matchesSearch = 
+        note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        note.sections.some(section => 
+          section.bibleReference.toLowerCase().includes(searchTerm.toLowerCase())
+        ) ||
+        note.freeText.some(freeText => 
+          freeText.content.toLowerCase().includes(searchTerm.toLowerCase())
+        ) ||
+        note.topics.some(topic => 
+          topic.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+      const matchesTopics = selectedTopics.length === 0 || 
+        selectedTopics.some(topic => note.topics.includes(topic));
+
+      return matchesSearch && matchesTopics;
+    })
     .sort((a, b) => {
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     })
@@ -82,7 +104,7 @@ export default function MyNotesPage() {
       </div>
 
       <div className="space-y-6">
-        {filteredNotes?.map(note => (
+        {filteredNotes.map(note => (
           <div key={note._id} className="bg-white rounded-lg shadow-md p-4">
             <Link href={`/notes/${note._id}`}>
               <h2 className="text-xl font-semibold mb-2 hover:text-emerald-600">{note.title}</h2>
@@ -94,26 +116,42 @@ export default function MyNotesPage() {
               )}
             </p>
             <h3 className="font-semibold mb-2">Bible Sections:</h3>
-            <ul className="list-disc list-inside mb-2">
-              {note.sections.map((section, index) => (
-                <li key={index} className="mb-1">
+            {note.sections && note.sections.length > 0 ? (
+              <ul className="list-disc list-inside mb-2">
+                {note.sections.map((section, index) => (
+                  <li key={index} className="mb-2 pl-4">
                     {section.bibleReference}
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-500 mb-2">No Bible sections</p>
+            )}
+            <h3 className="font-semibold mb-2">Note Content:</h3>
+            {note.freeText && note.freeText.length > 0 ? (
+              <p className="text-gray-500 mb-2">
+                Length: {note.freeText[0].content.length} characters
+              </p>
+            ) : (
+              <p className="text-gray-500 mb-2">No note content</p>
+            )}
             <h3 className="font-semibold mb-2">Topics:</h3>
             <div className="flex flex-wrap gap-2">
-              {note.topics.map((topic, index) => (
-                <span key={index} className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full text-sm">
-                  {topic}
-                </span>
-              ))}
+              {note.topics.length > 0 ? (
+                note.topics.map((topic, index) => (
+                  <span key={index} className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full text-sm">
+                    {topic}
+                  </span>
+                ))
+              ) : (
+                <p className="text-gray-500">No topics</p>
+              )}
             </div>
           </div>
         ))}
       </div>
 
-      {filteredNotes?.length === 0 && (
+      {filteredNotes.length === 0 && (
         <p className="text-center text-gray-600 mt-8">No notes found.</p>
       )}
     </div>

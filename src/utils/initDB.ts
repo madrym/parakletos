@@ -64,89 +64,73 @@ export async function clearDatabase() {
   }
 }
 
-// Add this object to map abbreviations to full book names
-const bookAbbreviations: { [key: string]: string } = {
-  'gen': 'Genesis',
-  'ex': 'Exodus',
-  'lev': 'Leviticus',
-  'num': 'Numbers',
-  'deut': 'Deuteronomy',
-  'josh': 'Joshua',
-  'judg': 'Judges',
-  'ruth': 'Ruth',
-  '1sam': '1 Samuel',
-  '2sam': '2 Samuel',
-  '1kgs': '1 Kings',
-  '2kgs': '2 Kings',
-  '1chr': '1 Chronicles',
-  '2chr': '2 Chronicles',
-  'ezra': 'Ezra',
-  'neh': 'Nehemiah',
-  'esth': 'Esther',
-  'job': 'Job',
-  'ps': 'Psalms',
-  'prov': 'Proverbs',
-  'eccl': 'Ecclesiastes',
-  'song': 'Song of Solomon',
-  'isa': 'Isaiah',
-  'jer': 'Jeremiah',
-  'lam': 'Lamentations',
-  'ezek': 'Ezekiel',
-  'dan': 'Daniel',
-  'hos': 'Hosea',
-  'joel': 'Joel',
-  'amos': 'Amos',
-  'obad': 'Obadiah',
-  'jonah': 'Jonah',
-  'mic': 'Micah',
-  'nah': 'Nahum',
-  'hab': 'Habakkuk',
-  'zeph': 'Zephaniah',
-  'hag': 'Haggai',
-  'zech': 'Zechariah',
-  'mal': 'Malachi',
-  'matt': 'Matthew',
-  'mk': 'Mark',
-  'lk': 'Luke',
-  'jn': 'John',
-  'acts': 'Acts',
-  'rom': 'Romans',
-  '1cor': '1 Corinthians',
-  '2cor': '2 Corinthians',
-  'gal': 'Galatians',
-  'eph': 'Ephesians',
-  'phil': 'Philippians',
-  'col': 'Colossians',
-  '1thess': '1 Thessalonians',
-  '2thess': '2 Thessalonians',
-  '1tim': '1 Timothy',
-  '2tim': '2 Timothy',
-  'titus': 'Titus',
-  'phlm': 'Philemon',
-  'heb': 'Hebrews',
-  'jas': 'James',
-  '1pet': '1 Peter',
-  '2pet': '2 Peter',
-  '1jn': '1 John',
-  '2jn': '2 John',
-  '3jn': '3 John',
-  'jude': 'Jude',
-  'rev': 'Revelation',
-  '1john': '1 John',
-  '2john': '2 John',
-  '3john': '3 John',
-  '1kings': '1 Kings',
-  '2kings': '2 Kings',
-  '1chronicles': '1 Chronicles',
-  '2chronicles': '2 Chronicles',
-  '1corinthians': '1 Corinthians',
-  '2corinthians': '2 Corinthians',
-  '1thessalonians': '1 Thessalonians',
-  '2thessalonians': '2 Thessalonians',
-  '1timothy': '1 Timothy',
-  '2timothy': '2 Timothy',
-  '1peter': '1 Peter',
-  '2peter': '2 Peter'
+const bookAbbreviationsList: { [key: string]: string[] } = {
+  "Genesis": ["Gen", "Ge", "Gn"],
+  "Exodus": ["Exod", "Ex", "Exo"],
+  "Leviticus": ["Lev", "Le", "Lv"],
+  "Numbers": ["Num", "Nu", "Nm", "Nb"],
+  "Deuteronomy": ["Deut", "De", "Dt"],
+  "Joshua": ["Josh", "Jos", "Jsh"],
+  "Judges": ["Judg", "Jdg", "Jg", "Jdgs"],
+  "Ruth": ["Rth", "Ru"],
+  "1 Samuel": ["1 Sam", "1Sam", "1Sa", "1 Sa"],
+  "2 Samuel": ["2 Sam", "2Sam", "2Sa", "2 Sa"],
+  "1 Kings": ["1 Kgs", "1King", "1Ki", "1 Ki"],
+  "2 Kings": ["2 Kgs", "2King", "2Ki", "2 Ki"],
+  "1 Chronicles": ["1 Chr", "1Chr", "1Ch", "1 Ch", "1Chron", "1 Chron"],
+  "2 Chronicles": ["2 Chr", "2Chr", "2Ch", "2 Ch", "2Chron", "2 Chron"],
+  "Ezra": ["Ezr", "Ez"],
+  "Nehemiah": ["Neh", "Ne"],
+  "Esther": ["Esth", "Es"],
+  "Job": ["Job", "Jb"],
+  "Psalms": ["Ps", "Psalm", "Psa", "Psm"],
+  "Proverbs": ["Prov", "Pr", "Prv"],
+  "Ecclesiastes": ["Eccles", "Ecc", "Ec"],
+  "Song of Solomon": ["Song", "SS", "So", "Song of Songs", "Songs", "Sos"],
+  "Isaiah": ["Isa", "Is"],
+  "Jeremiah": ["Jer", "Je"],
+  "Lamentations": ["Lam", "La"],
+  "Ezekiel": ["Ezek", "Eze", "Ezk"],
+  "Daniel": ["Dan", "Da", "Dn"],
+  "Hosea": ["Hos", "Ho"],
+  "Joel": ["Joel", "Jl"],
+  "Amos": ["Am"],
+  "Obadiah": ["Obad", "Ob"],
+  "Jonah": ["Jonah", "Jon"],
+  "Micah": ["Mic", "Mc"],
+  "Nahum": ["Nah", "Na"],
+  "Habakkuk": ["Hab", "Hb"],
+  "Zephaniah": ["Zeph", "Zep", "Zp"],
+  "Haggai": ["Hag", "Hg"],
+  "Zechariah": ["Zech", "Zec", "Zc"],
+  "Malachi": ["Mal", "Ml"],
+  "Matthew": ["Matt", "Mt"],
+  "Mark": ["Mark", "Mrk", "Mk", "Mr"],
+  "Luke": ["Luke", "Luk", "Lk"],
+  "John": ["John", "Jn", "Jhn"],
+  "Acts": ["Acts", "Ac"],
+  "Romans": ["Rom", "Ro", "Rm"],
+  "1 Corinthians": ["1 Cor", "1Cor", "1Co",  "1 Co", "1Corinthians"],
+  "2 Corinthians": ["2 Cor", "2Cor", "2Co", "2 Co", "2Corinthians"],
+  "Galatians": ["Gal", "Ga"],
+  "Ephesians": ["Eph", "Ephes", "Ephesians"],
+  "Philippians": ["Phil", "Php", "Pp"],
+  "Colossians": ["Col", "Co"],
+  "1 Thessalonians": ["1 Thess", "1Thess", "1Th", "1 Th", "1Ts", "1 Ts"],
+  "2 Thessalonians": ["2 Thess", "2Thess", "2Th", "2 Th", "2Ts", "2 Ts"],
+  "1 Timothy": ["1 Tim", "1Tim", "1 Ti", "1Ti"],
+  "2 Timothy": ["2 Tim", "2Tim", "2 Ti", "2Ti"],
+  "Titus": ["Tit", "Ti"],
+  "Philemon": ["Phil", "Phm"],
+  "Hebrews": ["Heb"],
+  "James": ["Jam", "Jm"],
+  "1 Peter": ["1 Pet", "1Pet", "1Pe", "1Pt", "1P"],
+  "2 Peter": ["2 Pet", "2Pet", "2Pe", "2Pt", "2P"],
+  "1 John": ["1 John", "1Jn", "1J"],
+  "2 John": ["2 John", "2Jn", "2J"],
+  "3 John": ["3 John", "3Jn", "3J"],
+  "Jude": ["Jude"],
+  "Revelation": ["Rev", "Re", "Revel"]
 };
 
 function parseReference(reference: string): { book: string, chapter: number, verse?: number, endVerse?: number } {
@@ -176,11 +160,25 @@ function parseReference(reference: string): { book: string, chapter: number, ver
   // Normalize the book name
   book = book.toLowerCase().replace(/\s+/g, '');
   
-  // Handle book abbreviations
-  const fullBookName = Object.entries(bookAbbreviations).find(([abbr, ]) => {
-    const normalizedAbbr = abbr.toLowerCase().replace(/\s+/g, '');
-    return book === normalizedAbbr || book.startsWith(normalizedAbbr);
-  })?.[1];
+  // Handle book abbreviations using bookAbbreviationsList
+  const fullBookName = Object.entries(bookAbbreviationsList).find(([fullName, abbreviations]) => {
+    const normalizedFullName = fullName.toLowerCase().replace(/\s+/g, '');
+    
+    // Check if the input matches the full name
+    if (normalizedFullName === book) {
+      return true;
+    }
+    
+    // Check if the input matches any of the abbreviations
+    return abbreviations.some(abbr => {
+      const normalizedAbbr = abbr.toLowerCase().replace(/\s+/g, '');
+      // Handle cases where the book starts with a number (e.g., "1john", "1jn")
+      if (normalizedFullName[0] === '1' || normalizedFullName[0] === '2' || normalizedFullName[0] === '3') {
+        return book === normalizedAbbr || book === normalizedFullName;
+      }
+      return book === normalizedAbbr || book.startsWith(normalizedAbbr);
+    });
+  })?.[0];
 
   if (fullBookName) {
     book = fullBookName;
