@@ -1,13 +1,13 @@
 'use client'
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import EditorJS, { OutputData, LogLevels } from '@editorjs/editorjs';
+import EditorJS, { OutputData, LogLevels, BlockToolConstructable } from '@editorjs/editorjs';
 import Header from '@editorjs/header';
-import List from '@editorjs/list';
 import Paragraph from '@editorjs/paragraph';
-import Quote from '@editorjs/quote';
+import EditorjsList from '@editorjs/list';
+import Annotation from 'editorjs-annotation';
+import Delimiter from '@editorjs/delimiter';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Id } from '../../convex/_generated/dataModel';
@@ -32,9 +32,7 @@ interface VersePreview {
 
 const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
   const editorRef = useRef<EditorJS | null>(null);
-  const [isToolbarOpen, setIsToolbarOpen] = useState(false);
   const [isEditorReady, setIsEditorReady] = useState(false);
-  const [, setLastSavedContent] = useState<string>('');
   const noteFreeTextIdRef = useRef<Id<"noteFreeText"> | null>(null);
   const editorId = `editorjs-${noteId}`;
   const [isSaved, setIsSaved] = useState(false);
@@ -66,27 +64,6 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
 
     initializeNoteFreeText();
   }, [noteFreeText, noteId, userId, createNoteFreeText]);
-
-
-  useEffect(() => {
-    // Initialize lastSavedContent when note data is loaded
-    if (noteFreeText && noteFreeText.length > 0) {
-      try {
-        const content = JSON.parse(noteFreeText[0].content);
-        const normalizedContent = {
-          ...content,
-          time: undefined,
-          blocks: content.blocks.map((block: any) => ({
-            ...block,
-            id: undefined
-          }))
-        };
-        setLastSavedContent(JSON.stringify(normalizedContent));
-      } catch (error) {
-        console.error('Error parsing initial content:', error);
-      }
-    }
-  }, [noteFreeText]);
 
   const saveEditorContent = useCallback(async (content: OutputData) => {
     try {
@@ -176,18 +153,6 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
     return data;
   };
 
-  const handleToolSelect = async (tool: string) => {
-    setIsToolbarOpen(false);
-    if (editorRef.current) {
-      if (tool === 'bibleVerse') {
-        // Let the tool handle the prompt and verse fetching
-        await editorRef.current.blocks.insert('bibleVerse');
-      } else {
-        editorRef.current.blocks.insert(tool);
-      }
-    }
-  };
-
   const detectBibleReference = (text: string) => {
     // Basic regex to match common Bible verse patterns
     const bibleReferenceRegex = /\b(\d?\s*[a-z]+(?:\s+[a-z]+)?)\s*(\d+)(?::(\d+)(?:-(\d+))?)?\b/i;
@@ -213,11 +178,24 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
       currentEditor = new EditorJS({
         holder: editorId,
         tools: {
-          paragraph: Paragraph,
-          header: Header,
-          list: List,
-          quote: Quote,
-          bibleVerse: BibleVerseTool
+          header: {
+            class: Header as unknown as BlockToolConstructable,
+            inlineToolbar: ['bold', 'italic', 'annotation', 'link']
+          },
+          paragraph: {
+            class: Paragraph as unknown as BlockToolConstructable,
+            inlineToolbar: ['bold', 'italic', 'annotation', 'link']
+          },
+          list: {
+            class: EditorjsList as unknown as BlockToolConstructable
+          },
+          annotation: Annotation,
+          bibleVerse: {
+            class: BibleVerseTool as unknown as BlockToolConstructable,
+          },
+          delimiter: {
+            class: Delimiter as unknown as BlockToolConstructable,
+          }
         },
         data: noteFreeText && noteFreeText.length > 0 
           ? validateAndFixData(JSON.parse(noteFreeText[0].content))
@@ -290,33 +268,12 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
     }
   }, [noteFreeText, noteId]);
 
-  const renderToolbar = () => (
-    <Dialog open={isToolbarOpen} onOpenChange={setIsToolbarOpen}>
-      <DialogTrigger asChild>
-        <Button className="fixed bottom-4 right-4 rounded-full">+</Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Add Block</DialogTitle>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <Button onClick={() => handleToolSelect('header')}>Header</Button>
-          <Button onClick={() => handleToolSelect('paragraph')}>Paragraph</Button>
-          <Button onClick={() => handleToolSelect('list')}>List</Button>
-          <Button onClick={() => handleToolSelect('quote')}>Quote</Button>
-          <Button onClick={() => handleToolSelect('bibleVerse')}>Bible Verse</Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-
   return (
     <div className="relative">
       <div 
         id={editorId}
         className="prose max-w-full min-h-[200px] border border-gray-300 rounded p-4"
       />
-      {isEditorReady && renderToolbar()}
       {!isEditorReady && <div>Loading editor...</div>}
       {isSaved && (
         <div className="absolute top-2 right-2 text-sm text-green-700 font-semibold">
