@@ -153,16 +153,6 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
     return data;
   };
 
-  const handleToolSelect = async (tool: string) => {
-    if (editorRef.current) {
-      if (tool === 'bibleVerse') {
-        await editorRef.current.blocks.insert('bibleVerse');
-      } else {
-        editorRef.current.blocks.insert(tool);
-      }
-    }
-  };
-
   const detectBibleReference = (text: string) => {
     // Basic regex to match common Bible verse patterns
     const bibleReferenceRegex = /\b(\d?\s*[a-z]+(?:\s+[a-z]+)?)\s*(\d+)(?::(\d+)(?:-(\d+))?)?\b/i;
