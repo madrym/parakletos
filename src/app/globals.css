@@ -288,3 +288,34 @@
 .bible-verse-block {
   margin: 1em 0;
 }
+
+/* EditorJS Header Styles */
+.ce-block__content h1 {
+  font-size: 2.5em;
+  font-weight: bold;
+}
+
+.ce-block__content h2 {
+  font-size: 2em;
+  font-weight: bold;
+}
+
+.ce-block__content h3 {
+  font-size: 1.75em;
+  font-weight: bold;
+}
+
+.ce-block__content h4 {
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+.ce-block__content h5 {
+  font-size: 1.25em;
+  font-weight: bold;
+}
+
+.ce-block__content h6 {
+  font-size: 1em;
+  font-weight: bold;
+}
