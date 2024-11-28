@@ -32,9 +32,7 @@ interface VersePreview {
 
 const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
   const editorRef = useRef<EditorJS | null>(null);
-  const [isToolbarOpen, setIsToolbarOpen] = useState(false);
   const [isEditorReady, setIsEditorReady] = useState(false);
-  const [, setLastSavedContent] = useState<string>('');
   const noteFreeTextIdRef = useRef<Id<"noteFreeText"> | null>(null);
   const editorId = `editorjs-${noteId}`;
   const [isSaved, setIsSaved] = useState(false);
@@ -66,27 +64,6 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
 
     initializeNoteFreeText();
   }, [noteFreeText, noteId, userId, createNoteFreeText]);
-
-
-  useEffect(() => {
-    // Initialize lastSavedContent when note data is loaded
-    if (noteFreeText && noteFreeText.length > 0) {
-      try {
-        const content = JSON.parse(noteFreeText[0].content);
-        const normalizedContent = {
-          ...content,
-          time: undefined,
-          blocks: content.blocks.map((block: any) => ({
-            ...block,
-            id: undefined
-          }))
-        };
-        setLastSavedContent(JSON.stringify(normalizedContent));
-      } catch (error) {
-        console.error('Error parsing initial content:', error);
-      }
-    }
-  }, [noteFreeText]);
 
   const saveEditorContent = useCallback(async (content: OutputData) => {
     try {
@@ -177,7 +154,6 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
   };
 
   const handleToolSelect = async (tool: string) => {
-    setIsToolbarOpen(false);
     if (editorRef.current) {
       if (tool === 'bibleVerse') {
         await editorRef.current.blocks.insert('bibleVerse');
@@ -214,11 +190,11 @@ const NoteTaking: React.FC<NoteTakingProps> = ({ noteId, userId }) => {
         tools: {
           header: {
             class: Header as unknown as BlockToolConstructable,
-            inlineToolbar: true
+            inlineToolbar: ['bold', 'italic', 'annotation', 'link']
           },
           paragraph: {
             class: Paragraph as unknown as BlockToolConstructable,
-            inlineToolbar: ['bold', 'italic', 'annotation']
+            inlineToolbar: ['bold', 'italic', 'annotation', 'link']
           },
           list: {
             class: EditorjsList as unknown as BlockToolConstructable
