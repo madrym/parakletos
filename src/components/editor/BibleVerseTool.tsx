@@ -159,8 +159,41 @@ export default class BibleVerseTool implements BlockTool {
         });
       } else {
         const placeholder = document.createElement('div');
-        placeholder.classList.add('text-gray-400', 'p-4');
+        placeholder.classList.add('text-gray-400', 'p-4', 'flex', 'items-center', 'justify-between');
         placeholder.textContent = 'No verses found';
+
+        // Add edit button if not in readonly mode
+        if (!this.readOnly) {
+          const editButton = document.createElement('button');
+          editButton.classList.add(
+            'px-2',
+            'py-1',
+            'text-sm',
+            'text-gray-600',
+            'hover:bg-gray-100',
+            'rounded'
+          );
+          editButton.textContent = 'Edit';
+          editButton.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const newReference = prompt('Enter Bible reference:', this.data.reference);
+            if (newReference) {
+              try {
+                const result = await getVersesFromDB(newReference);
+                this.data = {
+                  reference: newReference,
+                  formattedReference: result.formattedReference,
+                  verses: result.verses
+                };
+                renderContent(); // Re-render the content
+              } catch (error) {
+                console.error('Error fetching Bible verses:', error);
+              }
+            }
+          });
+          placeholder.appendChild(editButton);
+        }
+        
         container.appendChild(placeholder);
       }
     };
